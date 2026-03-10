@@ -1,0 +1,32 @@
+name: Sync to HuggingFace Spaces
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to HuggingFace Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git remote add space https://owenlee-5678:$HF_TOKEN@huggingface.co/spaces/owenlee-5678/happy-badminton
+
+          # Create orphan branch (no history) to avoid pushing binary files
+          git checkout --orphan hf-deploy
+
+          # Remove binary files that HuggingFace rejects (models and plot images)
+          git rm -f models/simplified_ensemble.pkl models/set_count_model.pkl models/next_gen_ensemble.pkl 2>/dev/null || true
+          git rm -rf docs/plots/ 2>/dev/null || true
+
+          # Commit the filtered tree and push to HF
+          git commit -m "Deploy: $(git log main -1 --format='%s')"
+          git push space hf-deploy:main --force

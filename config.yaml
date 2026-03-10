@@ -1,0 +1,31 @@
+# Happy-Badminton 配置文件
+
+data:
+  raw_path: "data/raw/Tournament Results.xlsx"
+  processed_path: "data/processed"
+  features_path: "data/features"
+  cutoff_date: "2025-01-17"  # filter out matches after this date
+
+features:
+  rolling_windows: [3, 5, 10]
+  elo_k_factor: 32
+  cold_start_threshold: 5
+
+model:
+  validation_method: "time_series_split"
+  test_size: 0.15
+  random_seed: 42
+
+training:
+  early_stopping_rounds: 50
+  n_trials: 100  # Optuna 试验次数
+
+visualization:
+  output_dir: "docs/plots"
+  dpi: 100
+  style: "whitegrid"
+
+logging:
+  level: "INFO"
+  format: "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {name}:{function}:{line} - {message}"
+  rotation: "10 MB"

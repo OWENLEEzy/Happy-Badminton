@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Happy Badminton — Match Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <svg class="shuttlecock" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="16" cy="24" r="5" fill="#FFDE00" stroke="#0F1923" stroke-width="1.5"/>
+    <path d="M16 19 C12 12 8 8 10 4 C12 0 20 0 22 4 C24 8 20 12 16 19Z" fill="white" stroke="#0F1923" stroke-width="1.5"/>
+    <line x1="11" y1="7" x2="16" y2="19" stroke="#0F1923" stroke-width="1"/>
+    <line x1="16" y1="4" x2="16" y2="19" stroke="#0F1923" stroke-width="1"/>
+    <line x1="21" y1="7" x2="16" y2="19" stroke="#0F1923" stroke-width="1"/>
+  </svg>
+  <div>
+    <div class="header-title">HAPPY <span>BADMINTON</span></div>
+    <span class="header-sub">ML Match Predictor · v4.0</span>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('zh')">中文</button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════
+     VIEW: HOME
+════════════════════════════════════════════ -->
+<div id="view-home" class="view active">
+  <div class="container">
+    <div class="home-headline" data-i18n="home_headline">PREDICT<br>THE MATCH</div>
+    <div class="home-sub">STACKING ENSEMBLE · LGBM + XGBOOST + CATBOOST · AUC 0.9608</div>
+    <div class="home-cards">
+      <div class="mode-card" onclick="showView('quick')">
+        <span class="mode-card-icon">⚡</span>
+        <div class="mode-card-title" data-i18n="quick_title">QUICK</div>
+        <div class="mode-card-desc" data-i18n="quick_desc">Just rankings and H2H. Fast prediction in seconds.</div>
+        <div class="mode-card-inputs" data-i18n="quick_inputs">RANKING · TOURNAMENT · ROUND · H2H</div>
+        <button class="btn-start" data-i18n="start_btn">START →</button>
+      </div>
+      <div class="mode-card expert" onclick="showView('expert')">
+        <span class="mode-card-icon">🔬</span>
+        <div class="mode-card-title" data-i18n="expert_title">EXPERT</div>
+        <div class="mode-card-desc" data-i18n="expert_desc">Full form data from BadmintonRanks.com for maximum accuracy.</div>
+        <div class="mode-card-inputs" data-i18n="expert_inputs">FORM · STREAK · CAREER · OPP QUALITY</div>
+        <button class="btn-start" data-i18n="start_btn">START →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW: QUICK
+════════════════════════════════════════════ -->
+<div id="view-quick" class="view">
+  <div class="container">
+    <button class="back-btn" onclick="showView('home')"><span data-i18n="back_btn">← BACK</span></button>
+    <div class="form-headline" data-i18n="quick_headline">QUICK PREDICT</div>
+
+    <div class="error-msg" id="quick-error"></div>
+
+    <!-- Match context -->
+    <div class="panel">
+      <div class="section-label" data-i18n="match_context">Match Context</div>
+      <div class="context-row">
+        <div>
+          <div class="field-label" data-i18n="type_label">Type</div>
+          <div class="toggle-group" id="quick-type-toggle">
+            <button class="toggle-btn active" data-val="MS">MS</button>
+            <button class="toggle-btn" data-val="WS">WS</button>
+          </div>
+        </div>
+        <div>
+          <div class="field-label" data-i18n="tourney_level">Tournament Level</div>
+          <div class="select-wrap">
+            <select id="quick-level">
+              <option value="" disabled selected>— Select —</option>
+              <option value="S1000">Super 1000</option>
+              <option value="S750">Super 750</option>
+              <option value="S500">Super 500</option>
+              <option value="S300">Super 300</option>
+              <option value="S100">Super 100</option>
+              <option value="OG" data-i18n-opt="opt_og">Olympics</option>
+              <option value="WC" data-i18n-opt="opt_wc">World Championships</option>
+              <option value="WTF">World Tour Finals</option>
+              <option value="IS" data-i18n-opt="opt_is">International Series</option>
+              <option value="IC" data-i18n-opt="opt_ic">International Challenge</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="field-label" data-i18n="round_stage">Round Stage</div>
+          <div class="select-wrap">
+            <select id="quick-round">
+              <option value="" disabled selected>— Select —</option>
+              <option value="0" data-i18n-opt="opt_qr1">Q-Round 1</option>
+              <option value="1" data-i18n-opt="opt_qr2">Q-Round 2</option>
+              <option value="2" data-i18n-opt="opt_qr3">Q-Round 3</option>
+              <option value="3" data-i18n-opt="opt_r1">Round 1</option>
+              <option value="4" data-i18n-opt="opt_r2">Round 2</option>
+              <option value="5" data-i18n-opt="opt_r3">Round 3</option>
+              <option value="6" data-i18n-opt="opt_qf">Quarter-final</option>
+              <option value="7" data-i18n-opt="opt_sf">Semi-final</option>
+              <option value="8" data-i18n-opt="opt_f">Final</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label" data-i18n="host_country">Host Country (optional)</div>
+        <div class="select-wrap">
+          <select id="quick-country"></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Players -->
+    <div class="panel">
+      <div class="row">
+        <div>
+          <div class="col-header" data-i18n="player1">PLAYER 1</div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_rank">BWF Ranking</div>
+            <input type="number" id="q-p1-rank" placeholder="1" min="1" max="1000">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="nationality">Nationality</div>
+            <div class="select-wrap">
+              <select id="q-p1-nat"></select>
+            </div>
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
+            <input type="number" id="q-p1-elo" placeholder="1616" min="1000" max="3000" required>
+          </div>
+        </div>
+        <div>
+          <div class="col-header" data-i18n="player2">PLAYER 2</div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_rank">BWF Ranking</div>
+            <input type="number" id="q-p2-rank" placeholder="2" min="1" max="1000">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="nationality">Nationality</div>
+            <div class="select-wrap">
+              <select id="q-p2-nat"></select>
+            </div>
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
+            <input type="number" id="q-p2-elo" placeholder="1616" min="1000" max="3000" required>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- H2H -->
+    <div class="panel">
+      <div class="section-label" data-i18n="h2h_optional_long">Head-to-Head (optional — leave blank if unknown)</div>
+      <div class="row">
+        <div class="field-wrap">
+          <div class="field-label" data-i18n="p1_wins">P1 Wins</div>
+          <input type="number" id="q-h2h-wins" placeholder="0" min="0">
+        </div>
+        <div class="field-wrap">
+          <div class="field-label" data-i18n="total_matches">Total Matches</div>
+          <input type="number" id="q-h2h-total" placeholder="0" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="spinner" id="quick-spinner"></div>
+    <button class="btn-predict" id="quick-submit" onclick="submitQuick()" data-i18n="predict_btn">PREDICT →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW: EXPERT
+════════════════════════════════════════════ -->
+<div id="view-expert" class="view">
+  <div class="container">
+    <button class="back-btn" onclick="showView('home')"><span data-i18n="back_btn">← BACK</span></button>
+    <div class="form-headline" data-i18n="expert_headline">EXPERT PREDICT</div>
+
+    <div class="error-msg" id="expert-error"></div>
+
+    <!-- Match context -->
+    <div class="panel">
+      <div class="section-label" data-i18n="match_context">Match Context</div>
+      <div class="context-row">
+        <div>
+          <div class="field-label" data-i18n="type_label">Type</div>
+          <div class="toggle-group" id="expert-type-toggle">
+            <button class="toggle-btn active" data-val="MS">MS</button>
+            <button class="toggle-btn" data-val="WS">WS</button>
+          </div>
+        </div>
+        <div>
+          <div class="field-label" data-i18n="tourney_level">Tournament Level</div>
+          <div class="select-wrap">
+            <select id="expert-level">
+              <option value="" disabled selected>— Select —</option>
+              <option value="S1000">Super 1000</option>
+              <option value="S750">Super 750</option>
+              <option value="S500">Super 500</option>
+              <option value="S300">Super 300</option>
+              <option value="S100">Super 100</option>
+              <option value="OG" data-i18n-opt="opt_og">Olympics</option>
+              <option value="WC" data-i18n-opt="opt_wc">World Championships</option>
+              <option value="WTF">World Tour Finals</option>
+              <option value="IS" data-i18n-opt="opt_is">International Series</option>
+              <option value="IC" data-i18n-opt="opt_ic">International Challenge</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="field-label" data-i18n="round_stage">Round Stage</div>
+          <div class="select-wrap">
+            <select id="expert-round">
+              <option value="" disabled selected>— Select —</option>
+              <option value="0" data-i18n-opt="opt_qr1">Q-Round 1</option>
+              <option value="1" data-i18n-opt="opt_qr2">Q-Round 2</option>
+              <option value="2" data-i18n-opt="opt_qr3">Q-Round 3</option>
+              <option value="3" data-i18n-opt="opt_r1">Round 1</option>
+              <option value="4" data-i18n-opt="opt_r2">Round 2</option>
+              <option value="5" data-i18n-opt="opt_r3">Round 3</option>
+              <option value="6" data-i18n-opt="opt_qf">Quarter-final</option>
+              <option value="7" data-i18n-opt="opt_sf">Semi-final</option>
+              <option value="8" data-i18n-opt="opt_f">Final</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field-wrap">
+          <div class="field-label" data-i18n="host_country">Host Country</div>
+          <div class="select-wrap">
+            <select id="expert-country"></select>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <div class="field-label" data-i18n="match_month">Match Month (1–12)</div>
+          <input type="number" id="expert-month" min="1" max="12">
+        </div>
+      </div>
+    </div>
+
+    <!-- Players side by side -->
+    <div class="panel">
+      <a href="https://www.badmintonranks.com" target="_blank" rel="noopener" class="ext-link" data-i18n="badmintonranks_link">Look up stats on BadmintonRanks →</a>
+      <div class="row">
+        <div>
+          <div class="col-header" data-i18n="player1">PLAYER 1</div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="name_opt">Name (optional)</div>
+            <input type="text" id="e-p1-name" data-i18n-placeholder="ph_name1">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="nationality">Nationality</div>
+            <div class="select-wrap">
+              <select id="e-p1-nat"></select>
+            </div>
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_rank">BWF Ranking</div>
+            <input type="number" id="e-p1-rank" placeholder="1" min="1" max="1000">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="wins_last5">Wins in last 5</div>
+            <input type="number" id="e-p1-f5" placeholder="3" min="0" max="5">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="wins_last10">Wins in last 10</div>
+            <input type="number" id="e-p1-f10" placeholder="7" min="0" max="10">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="wins_last20">Wins in last 20</div>
+            <input type="number" id="e-p1-f20" placeholder="14" min="0" max="20">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="streak">Current Streak (neg = losing)</div>
+            <input type="number" id="e-p1-streak" placeholder="3" min="-50" max="50">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="career_matches">Career Matches</div>
+            <input type="number" id="e-p1-career" placeholder="200" min="0">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="threeset_rate_label">3-Set Rate % (opt.)</div>
+            <input type="number" id="e-p1-3srate" placeholder="40" min="0" max="100">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
+            <input type="number" id="e-p1-elo" placeholder="1616" min="1000" max="3000" required>
+          </div>
+        </div>
+        <div>
+          <div class="col-header" data-i18n="player2">PLAYER 2</div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="name_opt">Name (optional)</div>
+            <input type="text" id="e-p2-name" data-i18n-placeholder="ph_name2">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="nationality">Nationality</div>
+            <div class="select-wrap">
+              <select id="e-p2-nat"></select>
+            </div>
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_rank">BWF Ranking</div>
+            <input type="number" id="e-p2-rank" placeholder="2" min="1" max="1000">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="wins_last5">Wins in last 5</div>
+            <input type="number" id="e-p2-f5" placeholder="3" min="0" max="5">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="wins_last10">Wins in last 10</div>
+            <input type="number" id="e-p2-f10" placeholder="7" min="0" max="10">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="wins_last20">Wins in last 20</div>
+            <input type="number" id="e-p2-f20" placeholder="14" min="0" max="20">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="streak">Current Streak (neg = losing)</div>
+            <input type="number" id="e-p2-streak" placeholder="1" min="-50" max="50">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="career_matches">Career Matches</div>
+            <input type="number" id="e-p2-career" placeholder="150" min="0">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="threeset_rate_label">3-Set Rate % (opt.)</div>
+            <input type="number" id="e-p2-3srate" placeholder="40" min="0" max="100">
+          </div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
+            <input type="number" id="e-p2-elo" placeholder="1616" min="1000" max="3000" required>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- H2H -->
+    <div class="panel">
+      <div class="section-label" data-i18n="h2h_required">Head-to-Head</div>
+      <div class="row">
+        <div class="field-wrap">
+          <div class="field-label" data-i18n="p1_wins">P1 Wins</div>
+          <input type="number" id="e-h2h-wins" placeholder="0" min="0">
+        </div>
+        <div class="field-wrap">
+          <div class="field-label" data-i18n="total_matches">Total Matches</div>
+          <input type="number" id="e-h2h-total" placeholder="0" min="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="spinner" id="expert-spinner"></div>
+    <button class="btn-predict" id="expert-submit" onclick="submitExpert()" data-i18n="predict_btn">PREDICT →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW: RESULT
+════════════════════════════════════════════ -->
+<div id="view-result" class="view">
+  <div class="container">
+    <button class="back-btn" id="result-back-btn"><span data-i18n="back_btn">← BACK</span></button>
+
+    <div class="result-title" data-i18n="result_title">PREDICTION RESULT</div>
+    <div class="result-winner" id="result-winner-text">PLAYER 1 <span>WINS</span></div>
+
+    <div class="panel">
+      <!-- Player 1 probability -->
+      <div class="prob-container">
+        <div class="prob-labels">
+          <div class="prob-label-name" id="res-p1-name">Player 1</div>
+          <div class="prob-label-pct" id="res-p1-pct">—%</div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="res-p1-bar" style="width:0%"></div>
+        </div>
+        <div class="ci-track">
+          <div class="ci-bracket" id="res-ci-bracket" style="left:0%;width:0%"></div>
+        </div>
+        <div class="ci-label" id="res-ci-label"></div>
+      </div>
+
+      <!-- Player 2 probability -->
+      <div class="prob-container">
+        <div class="prob-labels">
+          <div class="prob-label-name" id="res-p2-name">Player 2</div>
+          <div class="prob-label-pct" id="res-p2-pct">—%</div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" id="res-p2-bar" style="width:0%;background:var(--red)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Set count prediction -->
+    <div class="panel" id="set-count-panel" style="display:none">
+      <div class="factors-title" data-i18n="set_count_title">SET COUNT PREDICTION</div>
+      <div id="set-count-list"></div>
+    </div>
+
+    <!-- Driving factors -->
+    <div class="panel" id="factors-panel" style="display:none">
+      <div class="factors-title" data-i18n="driving_factors">Driving Factors</div>
+      <div id="factors-list"></div>
+    </div>
+
+    <button class="btn-again" id="again-btn" data-i18n="again_btn">← PREDICT AGAIN</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <span data-i18n="footer_thanks">Special thanks to <a href="https://badmintonranks.com" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">BadmintonRanks.com</a> for generously providing the dataset that makes this project possible.</span>
+  <br>
+  Happy Badminton · StackingEnsemble (LGBM + XGB + CB) · AUC 0.9608
+</footer>
+
+
+<script src="/static/app.js"></script>
+</body>
+</html>

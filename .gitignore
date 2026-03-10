@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# Data
+data/processed/
+data/features/
+data/external/
+*.parquet
+*.csv
+# Ignore real data, allow sample file
+data/raw/Tournament Results.xlsx
+!data/raw/*sample*.xlsx
+!data/raw/*Sample*.xlsx
+
+# Models — ignore by default, allow deployment-critical files
+models/*.pkl
+!models/simplified_ensemble.pkl
+!models/set_count_model.pkl
+models/*.json
+!models/simplified_results.json
+!models/simplified_feature_importance.json
+!models/set_count_results.json
+!models/nat_pair_win_rates.json
+models/*.txt
+models/*.model
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Excel temporary files
+~$*.xlsx
+.*.xlsx
+
+# Optuna
+.optuna/
+*.db
+
+# CatBoost
+.catboost_info/
+catboost_info/
+
+# MLflow
+mlruns/
+
+# Claude AI
+.claude/

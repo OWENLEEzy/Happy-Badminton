@@ -1,0 +1,43 @@
+{
+  "timestamp": "2026-03-09T23:58:14.395160",
+  "model_type": "SetCountEnsemble",
+  "target": "sets_played == 3",
+  "n_features": 29,
+  "features": [
+    "log_rank_diff",
+    "rank_closeness",
+    "category_flag",
+    "level_numeric",
+    "round_stage",
+    "match_month",
+    "winner_home",
+    "loser_home",
+    "level_x_home",
+    "home_x_closeness",
+    "winner_form_5",
+    "loser_form_5",
+    "form_diff_5",
+    "form_diff_10",
+    "form_diff_20",
+    "form_momentum_w",
+    "form_momentum_l",
+    "momentum_diff",
+    "streak_capped_w",
+    "streak_capped_l",
+    "streak_capped_diff",
+    "h2h_win_rate_bayes",
+    "career_stage",
+    "rank_x_form_diff",
+    "rank_closeness_x_h2h",
+    "gender_x_rank",
+    "winner_3set_rate",
+    "loser_3set_rate",
+    "threeset_rate_diff"
+  ],
+  "metrics": {
+    "log_loss": 0.5582966317818931,
+    "auc": 0.6634515786739428,
+    "brier_score": 0.18886768035116352,
+    "accuracy": 0.7163394109396914
+  }
+}
