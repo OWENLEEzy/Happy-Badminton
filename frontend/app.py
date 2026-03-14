@@ -13,12 +13,25 @@ import pandas as pd
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 
-project_root = Path(__file__).parent.parent
+# Determine project root based on where app.py is located
+# Local: frontend/app.py → parent = project root
+# HF Space: app.py in root → parent IS project root
+if Path(__file__).parent.name == "frontend":
+    project_root = Path(__file__).parent.parent
+else:
+    project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from src.utils.constants import LEVEL_MAP, CONTINENT_MAP
 
-_frontend_dir = Path(__file__).parent
+# Determine frontend directory based on where app.py is located
+# Local: frontend/app.py → frontend dir is current directory
+# HF Space: app.py in root → templates/static are in root
+if Path(__file__).parent.name == "frontend":
+    _frontend_dir = Path(__file__).parent
+else:
+    _frontend_dir = Path(__file__).parent
+
 app = Flask(
     __name__,
     static_folder=str(_frontend_dir / "static"),
@@ -36,25 +49,38 @@ HF_ENABLE_AUTO_DOWNLOAD = os.environ.get("HF_ENABLE_AUTO_DOWNLOAD", "true").lowe
 # Allow ±20% tolerance to account for model version differences
 HF_MODEL_SIZES = {
     "simplified_ensemble.pkl": 3.3 * 1024 * 1024,  # ~3.3MB
+    "quick_ensemble.pkl": 3.3 * 1024 * 1024,  # ~3.3MB (Quick mode)
     "set_count_model.pkl": 1.1 * 1024 * 1024,  # ~1.1MB
     "simplified_results.json": 2 * 1024,  # ~2KB
     "simplified_feature_importance.json": 2 * 1024,  # ~2KB
+    "quick_results.json": 2 * 1024,  # ~2KB
+    "quick_feature_importance.json": 2 * 1024,  # ~2KB
+    "quick_nat_pair_win_rates.json": 200 * 1024,  # ~200KB
     "nat_pair_win_rates.json": 200 * 1024,  # ~200KB
     "set_count_results.json": 1 * 1024,  # ~1KB
 }
 
-# Simplified (general predictor) model cache
+# Simplified (Expert mode, 35 features) model cache
 _simplified_model: Any = None
 _simplified_features: list[str] | None = None
 _simplified_feature_importance: dict[str, float] | None = None
 _simplified_neutral_values: dict[str, float] | None = None
 
+# Quick mode (21 features) model cache
+_quick_model: Any = None
+_quick_features: list[str] | None = None
+_quick_feature_importance: dict[str, float] | None = None
+_quick_neutral_values: dict[str, float] | None = None
+
 # Set count model cache
 _set_count_model: Any = None
 _set_count_features: list[str] | None = None
 
-# Nationality pair win rates lookup cache
+# Nationality pair win rates lookup cache (Expert mode)
 _nat_pair_lookup: dict[str, float] | None = None
+
+# Quick mode nationality pair win rates lookup cache
+_quick_nat_pair_lookup: dict[str, float] | None = None
 
 
 def _validate_model_file_size(filepath: Path, filename: str) -> None:
@@ -285,6 +311,47 @@ def get_simplified_model() -> tuple[Any, list[str], dict[str, float], dict[str, 
     return _simplified_model, features, feat_importance, neutral_vals
 
 
+def get_quick_model() -> tuple[Any, list[str], dict[str, float], dict[str, float]]:
+    """Lazy-load the Quick mode ensemble model (21 features, no form/streak/career)."""
+    global _quick_model, _quick_features, _quick_feature_importance, _quick_neutral_values
+    if _quick_model is None:
+        import loguru
+
+        logger = loguru.logger
+
+        # Download or load model file
+        model_path = _download_from_huggingface("quick_ensemble.pkl")
+        results_path = _download_from_huggingface("quick_results.json")
+
+        logger.info(f"Loading Quick mode model from {model_path}...")
+        _quick_model = joblib.load(str(model_path))
+
+        with open(results_path) as f:
+            results = json.load(f)
+        _quick_features = results["features"]
+        _quick_neutral_values = results.get("neutral_values", {})
+
+        # Feature importance is optional for Quick mode
+        try:
+            fi_path = _download_from_huggingface("quick_feature_importance.json")
+            with open(fi_path) as f:
+                _quick_feature_importance = json.load(f)
+        except FileNotFoundError:
+            _quick_feature_importance = {}
+
+        logger.info("Quick mode model loaded.")
+
+    # Bind to locals so Pyright can narrow Optional types
+    features = _quick_features
+    feat_importance = _quick_feature_importance
+    neutral_vals = _quick_neutral_values
+    if features is None:
+        raise RuntimeError("Quick model feature list failed to load from results JSON")
+    if neutral_vals is None:
+        raise RuntimeError("Quick model neutral values failed to load from results JSON")
+    return _quick_model, features, feat_importance, neutral_vals
+
+
 def get_set_count_model() -> tuple[Any, list[str]]:
     """Lazy-load the set count prediction model."""
     global _set_count_model, _set_count_features
@@ -324,7 +391,7 @@ def _code_to_continent(code: str) -> str:
 
 
 def get_nat_pair_lookup() -> dict[str, float]:
-    """Lazy-load nationality pair win rates lookup."""
+    """Lazy-load nationality pair win rates lookup (Expert mode)."""
     global _nat_pair_lookup
     if _nat_pair_lookup is None:
         try:
@@ -340,6 +407,24 @@ def get_nat_pair_lookup() -> dict[str, float]:
     return lookup
 
 
+def get_quick_nat_pair_lookup() -> dict[str, float]:
+    """Lazy-load nationality pair win rates lookup (Quick mode)."""
+    global _quick_nat_pair_lookup
+    if _quick_nat_pair_lookup is None:
+        try:
+            path = _download_from_huggingface("quick_nat_pair_win_rates.json")
+            with open(path) as f:
+                _quick_nat_pair_lookup = json.load(f)
+        except FileNotFoundError:
+            # Fall back to Expert mode lookup if Quick lookup not available
+            _quick_nat_pair_lookup = get_nat_pair_lookup()
+    # Bind to local so Pyright can narrow Optional type
+    lookup = _quick_nat_pair_lookup
+    if lookup is None:
+        raise RuntimeError("Quick nationality pair win rates lookup failed to initialise")
+    return lookup
+
+
 def build_general_features(
     match_type: str,
     tournament_level: str,
@@ -349,12 +434,17 @@ def build_general_features(
     p1: dict[str, Any],
     p2: dict[str, Any],
     h2h: dict[str, Any],
+    nat_lookup: dict[str, float] | None = None,
+    mode: str = "expert",
 ) -> dict[str, float]:
-    """Convert user-supplied match parameters into the simplified feature vector.
+    """Convert user-supplied match parameters into the feature vector.
 
-    All values are pre-match only (no post-match data).
-    Note: avg_opp_rank (opponent quality) is not included here because
-    form_quality_diff was excluded from SIMPLIFIED_FEATURES during training.
+    Supports both Quick (21 features) and Expert (35 features) modes.
+    Quick mode skips form/streak/career calculations for efficiency.
+
+    Args:
+        nat_lookup: Nationality pair win rates lookup (uses default if None)
+        mode: "quick" (21 features) or "expert" (35 features)
     """
     p1_rank = max(1, p1.get("ranking", 100))
     p2_rank = max(1, p2.get("ranking", 100))
@@ -372,53 +462,68 @@ def build_general_features(
     level_x_home = level_numeric * winner_home
     home_x_closeness = winner_home * rank_closeness
 
-    def _form(d: dict[str, Any], key: str, default: float, window: float) -> float:
-        """Extract a form win count, clamp to [0, window], normalise to [0, 1]."""
-        raw = d.get(key)
-        val: float = float(raw) if raw is not None else default
-        return min(max(val, 0.0), window) / window
+    # Form & streak & career features (only used in Expert mode)
+    # Quick mode skips these calculations for efficiency
+    if mode == "expert":
 
-    # Clamp win counts to [0, window] so they cannot exceed the window size.
-    winner_form_5 = _form(p1, "form5_wins", 2.5, 5.0)
-    loser_form_5 = _form(p2, "form5_wins", 2.5, 5.0)
-    form_diff_5 = winner_form_5 - loser_form_5
+        def _form(d: dict[str, Any], key: str, default: float, window: float) -> float:
+            """Extract a form win count, clamp to [0, window], normalise to [0, 1]."""
+            raw = d.get(key)
+            val: float = float(raw) if raw is not None else default
+            return min(max(val, 0.0), window) / window
 
-    winner_form_10 = _form(p1, "form10_wins", 5.0, 10.0)
-    loser_form_10 = _form(p2, "form10_wins", 5.0, 10.0)
-    form_diff_10 = winner_form_10 - loser_form_10
+        # Clamp win counts to [0, window] so they cannot exceed the window size.
+        winner_form_5 = _form(p1, "form5_wins", 2.5, 5.0)
+        loser_form_5 = _form(p2, "form5_wins", 2.5, 5.0)
+        form_diff_5 = winner_form_5 - loser_form_5
 
-    winner_form_20 = _form(p1, "form20_wins", 10.0, 20.0)
-    loser_form_20 = _form(p2, "form20_wins", 10.0, 20.0)
-    form_diff_20 = winner_form_20 - loser_form_20
+        winner_form_10 = _form(p1, "form10_wins", 5.0, 10.0)
+        loser_form_10 = _form(p2, "form10_wins", 5.0, 10.0)
+        form_diff_10 = winner_form_10 - loser_form_10
 
-    form_momentum_w = winner_form_5 - winner_form_10
-    form_momentum_l = loser_form_5 - loser_form_10
-    momentum_diff = form_momentum_w - form_momentum_l
+        winner_form_20 = _form(p1, "form20_wins", 10.0, 20.0)
+        loser_form_20 = _form(p2, "form20_wins", 10.0, 20.0)
+        form_diff_20 = winner_form_20 - loser_form_20
 
-    raw_streak_w = p1.get("streak", 0)
-    raw_streak_l = p2.get("streak", 0)
-    streak_capped_w = float(np.sign(raw_streak_w) * min(abs(raw_streak_w), 5))
-    streak_capped_l = float(np.sign(raw_streak_l) * min(abs(raw_streak_l), 5))
-    streak_capped_diff = streak_capped_w - streak_capped_l
+        form_momentum_w = winner_form_5 - winner_form_10
+        form_momentum_l = loser_form_5 - loser_form_10
+        momentum_diff = form_momentum_w - form_momentum_l
 
-    def _career_stage(n: float) -> float:
-        if n <= 20:
-            return 0.0
-        elif n <= 50:
-            return 1.0
-        elif n <= 100:
-            return 2.0
-        elif n <= 200:
-            return 1.5
-        elif n <= 500:
-            return 0.5
-        else:
-            return 0.0
+        raw_streak_w = p1.get("streak", 0)
+        raw_streak_l = p2.get("streak", 0)
+        streak_capped_w = float(np.sign(raw_streak_w) * min(abs(raw_streak_w), 5))
+        streak_capped_l = float(np.sign(raw_streak_l) * min(abs(raw_streak_l), 5))
+        streak_capped_diff = streak_capped_w - streak_capped_l
 
-    career = max(0, p1.get("career_matches", 100))
-    career_stage = _career_stage(career)
-    career_l = max(0, p2.get("career_matches", 100))
-    career_stage_l = _career_stage(career_l)
+        def _career_stage(n: float) -> float:
+            if n <= 20:
+                return 0.0
+            elif n <= 50:
+                return 1.0
+            elif n <= 100:
+                return 2.0
+            elif n <= 200:
+                return 1.5
+            elif n <= 500:
+                return 0.5
+            else:
+                return 0.0
+
+        career = max(0, p1.get("career_matches", 100))
+        career_stage = _career_stage(career)
+        career_l = max(0, p2.get("career_matches", 100))
+        career_stage_l = _career_stage(career_l)
+    else:
+        # Quick mode: set form/streak/career to neutral values
+        winner_form_5 = loser_form_5 = 0.5
+        form_diff_5 = 0.0
+        winner_form_10 = loser_form_10 = 0.5
+        form_diff_10 = 0.0
+        winner_form_20 = loser_form_20 = 0.5
+        form_diff_20 = 0.0
+        form_momentum_w = form_momentum_l = momentum_diff = 0.0
+        streak_capped_w = streak_capped_l = streak_capped_diff = 0.0
+        career_stage = career_stage_l = 1.5
 
     # Bayesian H2H smoothing — wins cannot exceed total matches.
     PRIOR = 5
@@ -441,7 +546,8 @@ def build_general_features(
         p1_full = _bwf_to_full_name(p1_nat)
         p2_full = _bwf_to_full_name(p2_nat)
         pair_key = f"{min(p1_full, p2_full)}|{max(p1_full, p2_full)}"
-        lookup = get_nat_pair_lookup()
+        # Use provided nat_lookup, or fall back to default
+        lookup = nat_lookup if nat_lookup is not None else get_nat_pair_lookup()
         if pair_key in lookup:
             first_win_rate = lookup[pair_key]
             p1_win_rate = first_win_rate if p1_full <= p2_full else 1.0 - first_win_rate
@@ -681,10 +787,11 @@ def index():
 
 @app.route("/api/predict-general", methods=["POST"])
 def predict_general():
-    """General predictor using only pre-match, user-supplied features.
+    """General predictor supporting both Quick and Expert modes.
 
     Request body:
     {
+        "mode": "quick" | "expert",  # NEW: specify mode
         "match_type": "MS",
         "tournament_level": "S1000",
         "round_stage": 6,
@@ -694,15 +801,18 @@ def predict_general():
             "name": "optional",
             "ranking": 5,
             "nationality": "CHN",
-            "form5_wins": 3,
-            "form10_wins": 7,
-            "form20_wins": 14,
-            "streak": 3,
-            "career_matches": 200
+            "form5_wins": 3,     # Expert mode only
+            "form10_wins": 7,    # Expert mode only
+            "form20_wins": 14,   # Expert mode only
+            "streak": 3,         # Expert mode only
+            "career_matches": 200  # Expert mode only
         },
         "player2": { ... },
         "h2h": { "p1_wins": 3, "total": 7 }
     }
+
+    Quick mode: Only requires ranking, nationality, elo (21 features, AUC ~0.87)
+    Expert mode: Requires all fields including form/streak/career (35 features, AUC ~0.96)
     """
     try:
         if not request.is_json:
@@ -710,6 +820,11 @@ def predict_general():
         data = request.get_json(silent=True)
         if not data:
             return jsonify({"error": "Request body required"}), 400
+
+        # Determine mode: "quick" or "expert" (default to expert for backward compat)
+        mode = data.get("mode", "expert").lower()
+        if mode not in ["quick", "expert"]:
+            return jsonify({"error": "Invalid mode. Use 'quick' or 'expert'"}), 400
 
         match_type = data.get("match_type", "MS").upper()
         tournament_level = data.get("tournament_level", "S300")
@@ -731,10 +846,25 @@ def predict_general():
         if not p1.get("ranking") or not p2.get("ranking"):
             return jsonify({"error": "player1.ranking and player2.ranking are required"}), 400
 
-        model, feature_cols, feature_importance, neutral_values = get_simplified_model()
+        # Select model based on mode
+        if mode == "quick":
+            model, feature_cols, feature_importance, neutral_values = get_quick_model()
+            nat_lookup = get_quick_nat_pair_lookup()
+        else:  # expert
+            model, feature_cols, feature_importance, neutral_values = get_simplified_model()
+            nat_lookup = get_nat_pair_lookup()
 
         features_dict = build_general_features(
-            match_type, tournament_level, round_stage, match_month, host_country, p1, p2, h2h
+            match_type,
+            tournament_level,
+            round_stage,
+            match_month,
+            host_country,
+            p1,
+            p2,
+            h2h,
+            nat_lookup=nat_lookup,  # Pass appropriate lookup
+            mode=mode,  # Pass mode to skip unnecessary calculations in Quick mode
         )
         features_df = pd.DataFrame(
             [[features_dict.get(f, 0.0) for f in feature_cols]],

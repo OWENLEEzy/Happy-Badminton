@@ -245,6 +245,7 @@ function buildQuickPayload() {
 
   const now = new Date();
   return {
+    mode: 'quick',  // Use Quick mode model (21 features, AUC ~0.87)
     match_type: matchType,
     tournament_level: level,
     round_stage: parseInt(round, 10),
@@ -307,6 +308,7 @@ function buildExpertPayload() {
   const month     = intOrNull('expert-month') ?? (new Date().getMonth() + 1);
 
   return {
+    mode: 'expert',  // Use Expert mode model (35 features, AUC ~0.96)
     match_type: matchType,
     tournament_level: eLevel,
     round_stage: parseInt(eRound, 10),
