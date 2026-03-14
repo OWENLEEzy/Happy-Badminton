@@ -9,13 +9,12 @@ Functionality:
 
 import pandas as pd
 from pathlib import Path
-from typing import Tuple
 import loguru
 
 logger = loguru.logger
 
 
-def load_all_sheets(filepath: str | Path) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_all_sheets(filepath: str | Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load all three sheets from an Excel file.
 

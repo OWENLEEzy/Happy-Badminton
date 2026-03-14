@@ -322,3 +322,205 @@ def test_build_general_features_equal_elo_zero_diff() -> None:
 
     assert features["elo_diff"] == pytest.approx(0.0)
     assert features["log_rank_diff"] == pytest.approx(0.0)
+
+
+def test_build_general_features_career_stage_early_levels() -> None:
+    """career_stage must be 0.0 for n<=20 and 1.0 for n<=50."""
+    from frontend.app import build_general_features
+
+    with patch.object(app_module, "get_nat_pair_lookup", return_value={}):
+        features = build_general_features(
+            match_type="MS",
+            tournament_level="S1000",
+            round_stage=4,
+            match_month=6,
+            host_country="",
+            p1={"ranking": 10, "career_matches": 10},
+            p2={"ranking": 10, "career_matches": 30},
+            h2h={},
+        )
+
+    assert features["career_stage"] == pytest.approx(0.0)  # n=10 <= 20
+    assert features["career_stage_l"] == pytest.approx(1.0)  # n=30 <= 50
+
+
+def test_build_general_features_career_stage_late_levels() -> None:
+    """career_stage must be 0.5 for n<=500 and 0.0 for n>500."""
+    from frontend.app import build_general_features
+
+    with patch.object(app_module, "get_nat_pair_lookup", return_value={}):
+        features = build_general_features(
+            match_type="MS",
+            tournament_level="S1000",
+            round_stage=4,
+            match_month=6,
+            host_country="",
+            p1={"ranking": 10, "career_matches": 300},
+            p2={"ranking": 10, "career_matches": 700},
+            h2h={},
+        )
+
+    assert features["career_stage"] == pytest.approx(0.5)  # n=300: 200 < n <= 500
+    assert features["career_stage_l"] == pytest.approx(0.0)  # n=700: n > 500
+
+
+# ---------------------------------------------------------------------------
+# POST /api/predict-general — additional error paths
+# ---------------------------------------------------------------------------
+
+
+def test_predict_general_non_json_returns_400(client, mock_model) -> None:
+    """Non-JSON content type must return 400."""
+    response = client.post("/api/predict-general", data=b"not json", content_type="text/plain")
+    assert response.status_code == 400
+
+
+def test_predict_general_model_not_found_returns_503(client) -> None:
+    """FileNotFoundError from get_simplified_model must return 503."""
+    with patch.object(app_module, "get_simplified_model", side_effect=FileNotFoundError):
+        response = client.post("/api/predict-general", json=_VALID_PAYLOAD)
+    assert response.status_code == 503
+    data = response.get_json()
+    assert "error" in data
+
+
+def test_predict_general_set_count_file_not_found_graceful(client) -> None:
+    """When set count model file not found, endpoint still returns 200 without scenarios."""
+    model = _mock_model()
+    with (
+        patch.object(
+            app_module,
+            "get_simplified_model",
+            return_value=(model, _FEATURE_COLS, _FEATURE_IMPORTANCE, _NEUTRAL_VALUES),
+        ),
+        patch.object(app_module, "get_nat_pair_lookup", return_value={}),
+        patch.object(app_module, "bootstrap_confidence_interval", return_value=(0.55, 0.75)),
+        patch.object(app_module, "get_set_count_model", side_effect=FileNotFoundError),
+    ):
+        response = client.post("/api/predict-general", json=_VALID_PAYLOAD)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["set_count_scenarios"] is None
+
+
+def test_predict_general_set_count_generic_exception_graceful(client) -> None:
+    """Generic exception from set count model must be swallowed; endpoint still returns 200."""
+    model = _mock_model()
+    with (
+        patch.object(
+            app_module,
+            "get_simplified_model",
+            return_value=(model, _FEATURE_COLS, _FEATURE_IMPORTANCE, _NEUTRAL_VALUES),
+        ),
+        patch.object(app_module, "get_nat_pair_lookup", return_value={}),
+        patch.object(app_module, "bootstrap_confidence_interval", return_value=(0.55, 0.75)),
+        patch.object(app_module, "get_set_count_model", side_effect=RuntimeError("sc broken")),
+    ):
+        response = client.post("/api/predict-general", json=_VALID_PAYLOAD)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["set_count_scenarios"] is None
+
+
+def test_predict_general_fallback_predict_proba(client) -> None:
+    """When model lacks predict_proba_calibrated, falls back to predict_proba."""
+    model = MagicMock(spec=["predict_proba", "base_models", "meta_model", "calibrator"])
+    model.predict_proba.return_value = np.array([[0.30, 0.70]])
+    lgbm = MagicMock()
+    lgbm.predict_proba.return_value = np.array([[0.35, 0.65]])
+    xgb = MagicMock()
+    xgb.predict_proba.return_value = np.array([[0.30, 0.70]])
+    model.base_models = {"lightgbm": lgbm, "xgboost": xgb}
+    model.meta_model.predict.return_value = np.array([0.65])
+    model.calibrator = None
+
+    with (
+        patch.object(
+            app_module,
+            "get_simplified_model",
+            return_value=(model, _FEATURE_COLS, _FEATURE_IMPORTANCE, _NEUTRAL_VALUES),
+        ),
+        patch.object(app_module, "get_nat_pair_lookup", return_value={}),
+        patch.object(app_module, "bootstrap_confidence_interval", return_value=(0.60, 0.80)),
+        patch.object(app_module, "get_set_count_model", side_effect=FileNotFoundError),
+    ):
+        response = client.post("/api/predict-general", json=_VALID_PAYLOAD)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert 0.0 <= data["player1_win_prob"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# get_nat_pair_lookup — missing file returns empty dict
+# ---------------------------------------------------------------------------
+
+
+def test_get_nat_pair_lookup_missing_file(monkeypatch) -> None:
+    """When nat pair JSON file does not exist, lookup returns empty dict."""
+    monkeypatch.setattr(app_module, "_nat_pair_lookup", None)
+    monkeypatch.setattr(app_module, "project_root", Path("/nonexistent_hb_test"))
+    result = app_module.get_nat_pair_lookup()
+    assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# bootstrap_confidence_interval — direct unit test
+# ---------------------------------------------------------------------------
+
+
+def test_bootstrap_confidence_interval_valid_range() -> None:
+    """Bootstrap CI must have 0 <= ci_low <= ci_high <= 1."""
+    import pandas as pd
+
+    from frontend.app import bootstrap_confidence_interval
+
+    model = MagicMock()
+    lgbm = MagicMock()
+    lgbm.predict_proba.return_value = np.array([[0.35, 0.65]])
+    xgb = MagicMock()
+    xgb.predict_proba.return_value = np.array([[0.30, 0.70]])
+    model.base_models = {"lightgbm": lgbm, "xgboost": xgb}
+    model.meta_model.predict.return_value = np.array([0.65])
+    model.calibrator = None
+
+    features_df = pd.DataFrame([[0.0] * len(_FEATURE_COLS)], columns=_FEATURE_COLS)
+    ci_low, ci_high = bootstrap_confidence_interval(model, features_df, n_bootstrap=20)
+
+    assert 0.0 <= ci_low <= 1.0
+    assert 0.0 <= ci_high <= 1.0
+    assert ci_low <= ci_high
+
+
+def test_bootstrap_confidence_interval_predict_only_base_model() -> None:
+    """Base model with only predict (no predict_proba) must use predict fallback."""
+    import pandas as pd
+
+    from frontend.app import bootstrap_confidence_interval
+
+    model = MagicMock()
+    # base model without predict_proba — has predict only
+    reg_mock = MagicMock(spec=["predict"])
+    reg_mock.predict.return_value = np.array([0.6])
+    model.base_models = {"regressor": reg_mock}
+    model.meta_model.predict.return_value = np.array([0.6])
+    model.calibrator = None
+
+    features_df = pd.DataFrame([[0.0] * len(_FEATURE_COLS)], columns=_FEATURE_COLS)
+    ci_low, ci_high = bootstrap_confidence_interval(model, features_df, n_bootstrap=10)
+
+    assert 0.0 <= ci_low <= 1.0
+    assert ci_low <= ci_high
+
+
+# ---------------------------------------------------------------------------
+# POST /api/predict-general — generic 500 error path
+# ---------------------------------------------------------------------------
+
+
+def test_predict_general_generic_exception_returns_500(client) -> None:
+    """Unexpected exception from model inference must return 500."""
+    with patch.object(app_module, "get_simplified_model", side_effect=RuntimeError("unexpected")):
+        response = client.post("/api/predict-general", json=_VALID_PAYLOAD)
+    assert response.status_code == 500
+    data = response.get_json()
+    assert "error" in data

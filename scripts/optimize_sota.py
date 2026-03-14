@@ -258,7 +258,7 @@ def optimize_feature_selection(X_train, y_train, X_val, y_val, feature_names, im
     return best_result
 
 
-def main():
+def main() -> None:
     """主函数"""
     logger.info("")
     logger.info("╔════════════════════════════════════════╗")

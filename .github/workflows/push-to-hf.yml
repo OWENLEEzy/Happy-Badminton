@@ -20,13 +20,72 @@ jobs:
           git config user.name "GitHub Actions"
           git remote add space https://owenlee-5678:$HF_TOKEN@huggingface.co/spaces/owenlee-5678/happy-badminton
 
-          # Create orphan branch (no history) to avoid pushing binary files
-          git checkout --orphan hf-deploy
+          # Create a temporary directory for our deploy files
+          mkdir -p /tmp/hf-deploy
+          cd /tmp/hf-deploy
 
-          # Remove binary files that HuggingFace rejects (models and plot images)
-          git rm -f models/simplified_ensemble.pkl models/set_count_model.pkl models/next_gen_ensemble.pkl 2>/dev/null || true
-          git rm -rf docs/plots/ 2>/dev/null || true
+          # Initialize a new git repo with main branch
+          git init -b main
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
 
-          # Commit the filtered tree and push to HF
-          git commit -m "Deploy: $(git log main -1 --format='%s')"
-          git push space hf-deploy:main --force
+          # Copy only the files we need from the workspace
+          cp -r "$GITHUB_WORKSPACE/src" . 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE/requirements_hf.txt" requirements.txt 2>/dev/null || true
+          cp "$GITHUB_WORKSPACE/README_HF_SPACE.md" README.md 2>/dev/null || true
+
+          # Copy app.py and frontend assets to root (HuggingFace Space requirement)
+          # app.py expects templates/ and static/ in the same directory
+          cp "$GITHUB_WORKSPACE/frontend/app.py" app.py 2>/dev/null || true
+          cp -r "$GITHUB_WORKSPACE/frontend/templates" . 2>/dev/null || true
+          cp -r "$GITHUB_WORKSPACE/frontend/static" . 2>/dev/null || true
+
+          # Create .gitignore
+          echo "__pycache__/" > .gitignore
+          echo "*.pyc" >> .gitignore
+          echo "*.pyo" >> .gitignore
+          echo ".pytest_cache/" >> .gitignore
+          echo "*.log" >> .gitignore
+          echo ".DS_Store" >> .gitignore
+          git add .gitignore
+
+          # Create Dockerfile for HuggingFace Space
+          echo "FROM python:3.10-slim" > Dockerfile
+          echo "" >> Dockerfile
+          echo "WORKDIR /app" >> Dockerfile
+          echo "" >> Dockerfile
+          echo "# Copy requirements first for better caching" >> Dockerfile
+          echo "COPY requirements.txt ." >> Dockerfile
+          echo "" >> Dockerfile
+          echo "# Install Python dependencies" >> Dockerfile
+          echo "RUN pip install --no-cache-dir -r requirements.txt" >> Dockerfile
+          echo "" >> Dockerfile
+          echo "# Copy application code" >> Dockerfile
+          echo "COPY app.py ." >> Dockerfile
+          echo "COPY src/ ./src/" >> Dockerfile
+          echo "COPY templates/ ./templates/" >> Dockerfile
+          echo "COPY static/ ./static/" >> Dockerfile
+          echo "" >> Dockerfile
+          echo "# Create models directory" >> Dockerfile
+          echo "RUN mkdir -p models" >> Dockerfile
+          echo "" >> Dockerfile
+          echo "# Expose port" >> Dockerfile
+          echo "EXPOSE 7860" >> Dockerfile
+          echo "" >> Dockerfile
+          echo "# Set environment variables" >> Dockerfile
+          echo "ENV PYTHONUNBUFFERED=1" >> Dockerfile
+          echo "ENV HF_ENABLE_AUTO_DOWNLOAD=true" >> Dockerfile
+          echo "ENV PORT=7860" >> Dockerfile
+          echo "" >> Dockerfile
+          echo "# Run the application" >> Dockerfile
+          echo "CMD [\"python\", \"app.py\"]" >> Dockerfile
+          git add Dockerfile
+
+          # Stage all files
+          git add .
+
+          # Commit with the deploy message
+          git commit -m "Deploy: $(git -C "$GITHUB_WORKSPACE" log main -1 --format='%s')"
+
+          # Push to HuggingFace Space
+          git push https://owenlee-5678:$HF_TOKEN@huggingface.co/spaces/owenlee-5678/happy-badminton main:main --force

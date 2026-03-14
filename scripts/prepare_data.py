@@ -17,7 +17,7 @@ from src.data.preprocessor import DataPreprocessor
 from src.utils.logger import setup_logger
 
 
-def main():
+def main() -> None:
     """主函数"""
     # 设置日志
     logger = setup_logger()
@@ -44,7 +44,7 @@ def main():
     preprocessor.save_processed(OUTPUT_PATH)
 
     # 摘要
-    logger.info("\n" + "=" * 60)
+    logger.info(f"\n{'=' * 60}")
     logger.info("数据准备完成！")
     logger.info("=" * 60)
     summary = preprocessor.get_summary()

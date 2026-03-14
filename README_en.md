@@ -6,9 +6,10 @@
 
 [![AUC](https://img.shields.io/badge/AUC-0.9608-brightgreen?style=for-the-badge&logo=python)](README_en.md)
 [![Accuracy](https://img.shields.io/badge/Accuracy-89.7%25-blue?style=for-the-badge)](README_en.md)
-[![Tests](https://img.shields.io/badge/Tests-150%20passing-success?style=for-the-badge&logo=pytest)](README_en.md)
+[![Tests](https://img.shields.io/badge/Tests-192%20passing-success?style=for-the-badge&logo=pytest)](README_en.md)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](README_en.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](README_en.md)
+[![HuggingFace Spaces](https://img.shields.io/badge/HuggingFace-Spaces-blue?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/owenlee-5678/happy-badminton)
 
 *GBM Stacking Ensemble — LightGBM + XGBoost + CatBoost + BayesianRidge meta-learner + TemperatureScaler calibration*
 
@@ -20,11 +21,19 @@
 
 ## Quick Start
 
+### Option 1: Local
+
 ```bash
 uv sync                   # Install dependencies
 uv run python main.py     # Auto-train on first run (~3–5 min), then start server
 # Open http://localhost:5001
 ```
+
+### Option 2: HuggingFace Space
+
+Visit the [**Happy Badminton Space**](https://huggingface.co/spaces/owenlee-5678/happy-badminton) for the online version — no installation required.
+
+Models are hosted on the [**HuggingFace Model Hub**](https://huggingface.co/owenlee-5678/happy-badminton-models) and auto-downloaded by the Space.
 
 <details>
 <summary>More commands</summary>
@@ -97,7 +106,15 @@ flowchart TD
     G --> H[TemperatureScaler\nProbability calibration]
     H --> I[🎯 predict_proba_calibrated\nAUC 0.9608]
     E -->|Test 15%| I
+
+    J[HuggingFace Space] --> K[Model Hub\nAuto-download models]
+    K --> L[Flask API\n/predict-general]
 ```
+
+**Deployment Architecture**:
+- 📦 **Model Hub**: `owenlee-5678/happy-badminton-models` stores trained model files
+- 🚀 **Space**: Docker container auto-downloads models from Hub and starts API
+- 🔄 **CI/CD**: GitHub Actions syncs code to Space on every push
 
 ---
 
@@ -169,7 +186,7 @@ Happy-Badminton/
 │   ├── templates/index.html       # 4-view SPA
 │   └── static/                    # JS · CSS · SVG
 ├── models/                        # Trained artefacts (gitignored)
-└── tests/                         # 180+ pytest tests
+└── tests/                         # 192 pytest tests
 ```
 
 </details>

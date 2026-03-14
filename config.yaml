@@ -10,6 +10,8 @@ features:
   rolling_windows: [3, 5, 10]
   elo_k_factor: 32
   cold_start_threshold: 5
+  h2h_prior: 5           # Prior count for Bayesian H2H win rate estimation
+  nationality_prior: 10  # Prior count for nationality-based win rate estimation
 
 model:
   validation_method: "time_series_split"

@@ -1,7 +1,8 @@
 # All England Open 2026 — Semi-final Test Data
 
 > **Source:** [BadmintonRanks.com](https://badmintonranks.com/tournament?id=14702)
-> **Date:** 2026-03-07 (Semi-final day)
+> **Date:** 2026-03-15 (Semi-final day)
+> **ELO Data:** 2026-03-08 (Latest available before match)
 > **Level:** Super 1000 · Birmingham, England (Neutral for all players)
 > **Round:** Semi-final (value = 7)
 
@@ -40,6 +41,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 2 | |
+| ELO Rating | **2432** | #2 MS (as of 2026-03-08) |
 | Nationality | THA | |
 | Wins last 5 | **4** | L(India QF), W, W, W, W |
 | Wins last 10 | **8** | 2 losses: India QF + WTF SF |
@@ -55,6 +57,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 11 | |
+| ELO Rating | **2353** | #5 MS (as of 2026-03-08) |
 | Nationality | TPE | |
 | Wins last 5 | **4** | AE QF+R2+R1=W,W,W + German SF=L + German QF=W |
 | Wins last 10 | **6** | |
@@ -75,6 +78,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 12 | |
+| ELO Rating | **2274** | #8 MS (as of 2026-03-08) |
 | Nationality | IND | |
 | Wins last 5 | **3** | AE QF+R2+R1=W,W,W + Asia Team L,L |
 | Wins last 10 | **7** | |
@@ -91,6 +95,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 16 | |
+| ELO Rating | **2169** | #16 MS (as of 2026-03-08) |
 | Nationality | CAN | |
 | Wins last 5 | **5** | AE QF+R2+R1=W,W,W + Pan Am F+SF=W,W |
 | Wins last 10 | **9** | |
@@ -111,6 +116,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 1 | |
+| ELO Rating | **2813** | #1 WS (as of 2026-03-08) |
 | Nationality | KOR | |
 | Wins last 5 | **5** | Dominant 20+ win streak |
 | Wins last 10 | **10** | |
@@ -127,6 +133,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 3 | |
+| ELO Rating | **2574** | #3 WS (as of 2026-03-08) |
 | Nationality | CHN | |
 | Wins last 5 | **5** | AE QF+R2+R1=W,W,W + Indonesia F+SF=W,W |
 | Wins last 10 | **9** | |
@@ -147,6 +154,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 4 | |
+| ELO Rating | **2486** | #4 WS (as of 2026-03-08) |
 | Nationality | JPN | |
 | Wins last 5 | **4** | AE QF+R2+R1=W,W,W + Malaysia QF=L(Ret.) + Malaysia R2=W |
 | Wins last 10 | **7** | |
@@ -163,6 +171,7 @@
 | Field | Value | Notes |
 |-------|-------|-------|
 | BWF Ranking | 2 | |
+| ELO Rating | **2630** | #2 WS (as of 2026-03-08) |
 | Nationality | CHN | |
 | Wins last 5 | **4** | AE QF+R2+R1=W,W,W + German F=L + German SF=W |
 | Wins last 10 | **8** | |
@@ -197,6 +206,7 @@
 | Field | P1 (LIN) | P2 (Kunlavut) |
 |-------|----------|---------------|
 | BWF Ranking | 11 | 2 |
+| ELO Rating | 2353 | 2432 |
 | Wins last 5 | 4 | 4 |
 | Wins last 10 | 6 | 8 |
 | Wins last 20 | 14 | 15 |
@@ -210,6 +220,7 @@
 | Field | P1 (SEN) | P2 (LAI) |
 |-------|----------|----------|
 | BWF Ranking | 12 | 16 |
+| ELO Rating | 2274 | 2169 |
 | Wins last 5 | 3 | 5 |
 | Wins last 10 | 7 | 9 |
 | Wins last 20 | 15 | 16 |
@@ -223,6 +234,7 @@
 | Field | P1 (AN) | P2 (CHEN) |
 |-------|---------|-----------|
 | BWF Ranking | 1 | 3 |
+| ELO Rating | 2813 | 2574 |
 | Wins last 5 | 5 | 5 |
 | Wins last 10 | 10 | 9 |
 | Wins last 20 | 20 | 17 |
@@ -236,6 +248,7 @@
 | Field | P1 (YAMAGUCHI) | P2 (WANG) |
 |-------|----------------|-----------|
 | BWF Ranking | 4 | 2 |
+| ELO Rating | 2486 | 2630 |
 | Wins last 5 | 4 | 4 |
 | Wins last 10 | 7 | 8 |
 | Wins last 20 | 14 | 16 |

@@ -89,8 +89,7 @@ pytest tests/ -v      # 运行全部测试
 ```python
 # Data leakage features - NEVER use for training
 LEAK_FEATURES = [
-    'elo_diff', 'winner_elo', 'loser_elo',              # Post-match Elo
-    'mov_elo_diff', 'winner_mov_elo', 'loser_mov_elo',  # MOV Elo
+    'mov_elo_diff', 'winner_mov_elo', 'loser_mov_elo',  # MOV Elo (post-match)
     'winner_rank', 'loser_rank',                         # Post-match rank
     'sets_played', 'total_points',                       # Post-match stats
     'score',                                             # Match result

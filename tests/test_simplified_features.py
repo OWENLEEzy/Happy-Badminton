@@ -9,7 +9,7 @@ import pytest
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from scripts.train_simplified import (
+from src.data.simplified_features import (
     ROUND_STAGE_DEFAULT,
     ROUND_STAGE_MAP,
     compute_new_features,
@@ -26,7 +26,6 @@ def _base_df(n: int = 1) -> pd.DataFrame:
             "winner_streak": [3] * n,
             "loser_streak": [2] * n,
             "total_player_matches": [100] * n,
-            "loser_match_count": [80] * n,
             "winner_form_5": [0.6] * n,
             "loser_form_5": [0.4] * n,
             "winner_form_10": [0.55] * n,
@@ -52,7 +51,6 @@ def test_round_stage_mapping() -> None:
             "winner_streak": [0] * 4,
             "loser_streak": [0] * 4,
             "total_player_matches": [50] * 4,
-            "loser_match_count": [40] * 4,
             "winner_form_5": [0.5] * 4,
             "loser_form_5": [0.5] * 4,
             "h2h_win_rate": [0.5] * 4,

@@ -29,6 +29,9 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from scripts.validate_model import load_config, prepare_simplified_data  # noqa: E402
+from src.utils.logger import setup_logger
+
+logger = setup_logger()
 
 PLOT_DIR = project_root / "docs" / "plots"
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
@@ -69,7 +72,7 @@ def plot_roc(y_true: np.ndarray, y_prob: np.ndarray) -> None:
     fig.tight_layout()
     fig.savefig(PLOT_DIR / "eval_roc_curve.png")
     plt.close(fig)
-    print("  ✓ eval_roc_curve.png")
+    logger.info("  ✓ eval_roc_curve.png")
 
 
 def plot_pr(y_true: np.ndarray, y_prob: np.ndarray) -> None:
@@ -93,7 +96,7 @@ def plot_pr(y_true: np.ndarray, y_prob: np.ndarray) -> None:
     fig.tight_layout()
     fig.savefig(PLOT_DIR / "eval_pr_curve.png")
     plt.close(fig)
-    print("  ✓ eval_pr_curve.png")
+    logger.info("  ✓ eval_pr_curve.png")
 
 
 def plot_confusion(y_true: np.ndarray, y_prob: np.ndarray) -> None:
@@ -134,7 +137,7 @@ def plot_confusion(y_true: np.ndarray, y_prob: np.ndarray) -> None:
     fig.tight_layout()
     fig.savefig(PLOT_DIR / "eval_confusion_matrix.png")
     plt.close(fig)
-    print("  ✓ eval_confusion_matrix.png")
+    logger.info("  ✓ eval_confusion_matrix.png")
 
 
 def plot_calibration(y_true: np.ndarray, y_prob: np.ndarray, n_bins: int = 10) -> None:
@@ -174,7 +177,7 @@ def plot_calibration(y_true: np.ndarray, y_prob: np.ndarray, n_bins: int = 10) -
     fig.tight_layout()
     fig.savefig(PLOT_DIR / "eval_calibration.png")
     plt.close(fig)
-    print("  ✓ eval_calibration.png")
+    logger.info("  ✓ eval_calibration.png")
 
 
 def plot_score_distribution(y_true: np.ndarray, y_prob: np.ndarray) -> None:
@@ -203,13 +206,13 @@ def plot_score_distribution(y_true: np.ndarray, y_prob: np.ndarray) -> None:
     fig.tight_layout()
     fig.savefig(PLOT_DIR / "eval_score_distribution.png")
     plt.close(fig)
-    print("  ✓ eval_score_distribution.png")
+    logger.info("  ✓ eval_score_distribution.png")
 
 
 def plot_feature_importance(top_n: int = 20) -> None:
     importance_path = project_root / "models" / "simplified_feature_importance.json"
     if not importance_path.exists():
-        print("  ⚠ simplified_feature_importance.json not found, skipping")
+        logger.warning("  ⚠ simplified_feature_importance.json not found, skipping")
         return
 
     with open(importance_path) as f:
@@ -239,15 +242,15 @@ def plot_feature_importance(top_n: int = 20) -> None:
     fig.tight_layout()
     fig.savefig(PLOT_DIR / "eval_feature_importance.png")
     plt.close(fig)
-    print("  ✓ eval_feature_importance.png")
+    logger.info("  ✓ eval_feature_importance.png")
 
 
 def main() -> None:
-    print("Loading model and test data...")
+    logger.info("Loading model and test data...")
     model_path = project_root / "models" / "simplified_ensemble.pkl"
     results_path = project_root / "models" / "simplified_results.json"
     if not model_path.exists():
-        print("  ✗ Model not found. Run: uv run python scripts/train_simplified.py")
+        logger.error("  ✗ Model not found. Run: uv run python scripts/train_simplified.py")
         sys.exit(1)
 
     model = joblib.load(model_path)
@@ -256,11 +259,11 @@ def main() -> None:
         feature_cols: list[str] = json.load(f)["features"]
     X_test, y_test = prepare_simplified_data(config, feature_cols)
 
-    print("Running predictions...")
+    logger.info("Running predictions...")
     y_prob = model.predict_proba_calibrated(X_test)
     y_true = np.asarray(y_test)
 
-    print("Generating plots...")
+    logger.info("Generating plots...")
     plot_roc(y_true, y_prob)
     plot_pr(y_true, y_prob)
     plot_confusion(y_true, y_prob)
@@ -268,7 +271,7 @@ def main() -> None:
     plot_score_distribution(y_true, y_prob)
     plot_feature_importance()
 
-    print(f"\nAll plots saved to {PLOT_DIR}")
+    logger.info(f"\nAll plots saved to {PLOT_DIR}")
 
 
 if __name__ == "__main__":

@@ -28,6 +28,21 @@ app = Flask(
 # Defaults to "*" for local development only
 CORS(app, origins=os.environ.get("CORS_ORIGINS", "*").split(","))
 
+# HuggingFace Model Hub configuration
+HF_MODEL_REPO = os.environ.get("HF_MODEL_REPO", "owenlee-5678/happy-badminton-models")
+HF_ENABLE_AUTO_DOWNLOAD = os.environ.get("HF_ENABLE_AUTO_DOWNLOAD", "true").lower() in ("1", "true")
+
+# Expected model file sizes (in bytes) for integrity validation
+# Allow ±20% tolerance to account for model version differences
+HF_MODEL_SIZES = {
+    "simplified_ensemble.pkl": 3.3 * 1024 * 1024,  # ~3.3MB
+    "set_count_model.pkl": 1.1 * 1024 * 1024,  # ~1.1MB
+    "simplified_results.json": 2 * 1024,  # ~2KB
+    "simplified_feature_importance.json": 2 * 1024,  # ~2KB
+    "nat_pair_win_rates.json": 200 * 1024,  # ~200KB
+    "set_count_results.json": 1 * 1024,  # ~1KB
+}
+
 # Simplified (general predictor) model cache
 _simplified_model: Any = None
 _simplified_features: list[str] | None = None
@@ -40,6 +55,105 @@ _set_count_features: list[str] | None = None
 
 # Nationality pair win rates lookup cache
 _nat_pair_lookup: dict[str, float] | None = None
+
+
+def _validate_model_file_size(filepath: Path, filename: str) -> None:
+    """Validate downloaded model file size to detect corruption.
+
+    Args:
+        filepath: Path to the downloaded file
+        filename: Name of the file (for error messages)
+
+    Raises:
+        FileNotFoundError: If file size is outside expected range
+    """
+    if filename not in HF_MODEL_SIZES:
+        # No size check defined for this file, skip validation
+        return
+
+    expected_size = HF_MODEL_SIZES[filename]
+    actual_size = filepath.stat().st_size
+
+    # Allow ±20% tolerance
+    min_size = expected_size * 0.8
+    max_size = expected_size * 1.2
+
+    if actual_size < min_size or actual_size > max_size:
+        raise FileNotFoundError(
+            f"Downloaded file {filename} appears corrupted:\n"
+            f"  Expected size: {expected_size / 1024 / 1024:.2f}MB (±20% tolerance)\n"
+            f"  Actual size: {actual_size / 1024 / 1024:.2f}MB\n"
+            f"  The file may be partially downloaded or corrupted.\n"
+            f"  Try deleting {filepath} and re-downloading."
+        )
+
+
+def _download_from_huggingface(filename: str) -> Path:
+    """Download model file from HuggingFace Model Hub if local file missing.
+
+    Args:
+        filename: Name of the file to download (e.g., "simplified_ensemble.pkl")
+
+    Returns:
+        Path to the downloaded file
+
+    Raises:
+        FileNotFoundError: If download fails or is disabled
+    """
+    local_path = project_root / "models" / filename
+
+    # If local file exists, use it
+    if local_path.exists():
+        return local_path
+
+    # Check if auto-download is enabled
+    if not HF_ENABLE_AUTO_DOWNLOAD:
+        raise FileNotFoundError(
+            f"Model file not found: {local_path}\n"
+            f"Set HF_ENABLE_AUTO_DOWNLOAD=true to enable auto-download from HuggingFace Model Hub"
+        )
+
+    # Download from HuggingFace
+    try:
+        from huggingface_hub import hf_hub_download
+
+        import loguru
+
+        logger = loguru.logger
+        logger.info(f"Downloading {filename} from HuggingFace Model Hub...")
+
+        downloaded_path = hf_hub_download(
+            repo_id=HF_MODEL_REPO,
+            filename=filename,
+            local_dir=str(project_root / "models"),
+            local_dir_use_symlinks=False,
+        )
+
+        logger.info(f"✓ Downloaded {filename} from https://huggingface.co/{HF_MODEL_REPO}")
+
+        # Validate file size to detect corruption
+        downloaded_file = Path(downloaded_path)
+        _validate_model_file_size(downloaded_file, filename)
+
+        return downloaded_file
+    except ImportError:
+        raise FileNotFoundError(
+            f"huggingface_hub not installed. Install with: uv add huggingface_hub"
+        )
+    except OSError as e:
+        # Network-related errors (timeout, connection error, etc.)
+        raise FileNotFoundError(
+            f"Network error downloading {filename} from HuggingFace: {e}\n"
+            f"Check your network connection or try again later.\n"
+            f"Model Hub: https://huggingface.co/{HF_MODEL_REPO}"
+        )
+    except Exception as e:
+        # Other HuggingFace Hub errors (repo not found, file not found, etc.)
+        raise FileNotFoundError(
+            f"Failed to download {filename} from HuggingFace: {e}\n"
+            f"Please check: https://huggingface.co/{HF_MODEL_REPO}"
+        )
+
 
 # Maps BWF 3-letter association codes to full country names used in training data.
 # Allows continent and nationality-pair features to work from ISO code input.
@@ -140,9 +254,11 @@ def get_simplified_model() -> tuple[Any, list[str], dict[str, float], dict[str, 
 
         logger = loguru.logger
 
-        model_path = project_root / "models" / "simplified_ensemble.pkl"
-        results_path = project_root / "models" / "simplified_results.json"
-        fi_path = project_root / "models" / "simplified_feature_importance.json"
+        # Download or load model file
+        model_path = _download_from_huggingface("simplified_ensemble.pkl")
+        results_path = _download_from_huggingface("simplified_results.json")
+        fi_path = _download_from_huggingface("simplified_feature_importance.json")
+
         logger.info(f"Loading simplified model from {model_path}...")
         _simplified_model = joblib.load(str(model_path))
 
@@ -177,8 +293,10 @@ def get_set_count_model() -> tuple[Any, list[str]]:
 
         logger = loguru.logger
 
-        model_path = project_root / "models" / "set_count_model.pkl"
-        results_path = project_root / "models" / "set_count_results.json"
+        # Download or load model file
+        model_path = _download_from_huggingface("set_count_model.pkl")
+        results_path = _download_from_huggingface("set_count_results.json")
+
         logger.info(f"Loading set count model from {model_path}...")
         _set_count_model = joblib.load(str(model_path))
 
@@ -209,11 +327,11 @@ def get_nat_pair_lookup() -> dict[str, float]:
     """Lazy-load nationality pair win rates lookup."""
     global _nat_pair_lookup
     if _nat_pair_lookup is None:
-        path = project_root / "models" / "nat_pair_win_rates.json"
-        if path.exists():
+        try:
+            path = _download_from_huggingface("nat_pair_win_rates.json")
             with open(path) as f:
                 _nat_pair_lookup = json.load(f)
-        else:
+        except FileNotFoundError:
             _nat_pair_lookup = {}
     # Bind to local so Pyright can narrow Optional type
     lookup = _nat_pair_lookup
@@ -394,10 +512,22 @@ def bootstrap_confidence_interval(
     features_df: pd.DataFrame,
     n_bootstrap: int = 100,
     alpha: float = 0.1,
+    main_pred: float | None = None,
 ) -> tuple[float, float]:
     """Return (p_low, p_high) bootstrap confidence interval for prediction.
 
     Samples base-model predictions with replacement to estimate variance.
+    If main_pred is provided, ensures the CI brackets it by expanding if needed.
+
+    Args:
+        model: Ensemble model with base_models and meta_model.
+        features_df: Feature DataFrame for prediction.
+        n_bootstrap: Number of bootstrap samples.
+        alpha: Significance level (0.1 = 90% CI).
+        main_pred: Optional main model prediction to ensure CI brackets it.
+
+    Returns:
+        Tuple of (ci_low, ci_high) confidence interval bounds.
     """
     try:
         import catboost as _cb
@@ -415,7 +545,7 @@ def bootstrap_confidence_interval(
 
     base_preds = [_base_pred(name, bm) for name, bm in model.base_models.items()]
 
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(42)
     samples = []
     for _ in range(n_bootstrap):
         sampled = rng.choice(base_preds, size=len(base_preds), replace=True)
@@ -431,8 +561,20 @@ def bootstrap_confidence_interval(
                 raw = float(model.calibrator.predict(np.array([raw]))[0])
         samples.append(raw)
 
+    # Add main prediction to samples if provided to ensure CI brackets it
+    if main_pred is not None:
+        samples.append(float(main_pred))
+
     ci_low = float(np.percentile(samples, alpha * 100))
     ci_high = float(np.percentile(samples, (1 - alpha) * 100))
+
+    # Ensure CI brackets main prediction (force expansion if needed)
+    if main_pred is not None:
+        if main_pred < ci_low:
+            ci_low = float(main_pred)
+        elif main_pred > ci_high:
+            ci_high = float(main_pred)
+
     return ci_low, ci_high
 
 
@@ -571,8 +713,14 @@ def predict_general():
 
         match_type = data.get("match_type", "MS").upper()
         tournament_level = data.get("tournament_level", "S300")
-        round_stage = max(0, min(8, int(data.get("round_stage", 4))))
-        match_month = max(1, min(12, int(data.get("match_month", 6))))
+
+        # Parse integer fields with type validation
+        try:
+            round_stage = max(0, min(8, int(data.get("round_stage", 4))))
+            match_month = max(1, min(12, int(data.get("match_month", 6))))
+        except (ValueError, TypeError) as e:
+            return jsonify({"error": f"Invalid numeric value: {e}"}), 400
+
         host_country = data.get("host_country", "")
         p1 = data.get("player1", {})
         p2 = data.get("player2", {})
@@ -599,7 +747,7 @@ def predict_general():
             raw = model.predict_proba(features_df)
             prob = float(raw[0][1] if raw.ndim > 1 else raw[0])
 
-        ci_low, ci_high = bootstrap_confidence_interval(model, features_df)
+        ci_low, ci_high = bootstrap_confidence_interval(model, features_df, main_pred=prob)
 
         p1_name = p1.get("name") or "Player 1"
         p2_name = p2.get("name") or "Player 2"
@@ -628,10 +776,10 @@ def predict_general():
             }
         except FileNotFoundError:
             pass  # Set count model not trained yet
-        except Exception:
+        except (ValueError, AttributeError, KeyError, IndexError, RuntimeError) as e:
             import loguru
 
-            loguru.logger.warning("Set count prediction failed", exc_info=True)
+            loguru.logger.warning(f"Set count prediction failed: {e}", exc_info=True)
 
         return jsonify(
             {
@@ -656,10 +804,10 @@ def predict_general():
             ),
             503,
         )
-    except Exception:
+    except (ValueError, KeyError, AttributeError, TypeError, RuntimeError) as e:
         import loguru
 
-        loguru.logger.exception("Prediction request failed")
+        loguru.logger.exception(f"Prediction request failed: {e}")
         return jsonify({"error": "Prediction failed. Please check your input."}), 500
 
 
@@ -670,12 +818,14 @@ def health():
 
 
 if __name__ == "__main__":
+    import loguru
+
     PORT = int(os.environ.get("PORT", 5001))
-    print("=" * 60)
-    print("Badminton Match Prediction API")
-    print("=" * 60)
-    print(f"Frontend: http://localhost:{PORT}")
-    print(f"API:      http://localhost:{PORT}/api")
-    print("=" * 60)
+    loguru.logger.info("=" * 60)
+    loguru.logger.info("Badminton Match Prediction API")
+    loguru.logger.info("=" * 60)
+    loguru.logger.info(f"Frontend: http://localhost:{PORT}")
+    loguru.logger.info(f"API:      http://localhost:{PORT}/api")
+    loguru.logger.info("=" * 60)
     debug = os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true")
     app.run(host="0.0.0.0", port=PORT, debug=debug)

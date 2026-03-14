@@ -21,22 +21,26 @@ SET_COUNT_RESULTS = PROJECT_ROOT / "models" / "set_count_results.json"
 
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.utils.logger import setup_logger
+
+logger = setup_logger()
+
 
 def _banner(msg: str) -> None:
     width = 60
-    print("=" * width)
-    print(f"  {msg}")
-    print("=" * width)
+    logger.info("=" * width)
+    logger.info(f"  {msg}")
+    logger.info("=" * width)
 
 
 def check_data() -> None:
     """Fail fast with a friendly message if raw data is missing."""
     if not DATA_FILE.exists():
         _banner("ERROR: Data file not found")
-        print(f"  Expected: {DATA_FILE}")
-        print()
-        print("  Place 'Tournament Results.xlsx' in data/raw/ and retry.")
-        print("  (Sample data: data/raw/Tournament Results - Sample.xlsx)")
+        logger.error(f"  Expected: {DATA_FILE}")
+        logger.info("")
+        logger.info("  Place 'Tournament Results.xlsx' in data/raw/ and retry.")
+        logger.info("  (Sample data: data/raw/Tournament Results - Sample.xlsx)")
         sys.exit(1)
 
 
@@ -53,7 +57,7 @@ def model_ready() -> bool:
 def run_training() -> None:
     """Run training scripts in-process (preserves live log output)."""
     _banner("Training models (first run ~5-8 min)")
-    print()
+    logger.info("")
     os.chdir(PROJECT_ROOT)
     runpy.run_path(
         str(PROJECT_ROOT / "scripts" / "train_simplified.py"),
@@ -69,11 +73,11 @@ def start_server(port: int) -> None:
     """Import and run the Flask app."""
     from frontend.app import app  # noqa: PLC0415
 
-    print()
+    logger.info("")
     _banner("Badminton Prediction — General Predictor")
-    print(f"  Open: http://localhost:{port}")
-    print("=" * 60)
-    print()
+    logger.info(f"  Open: http://localhost:{port}")
+    logger.info("=" * 60)
+    logger.info("")
     debug = os.environ.get("FLASK_DEBUG", "false").lower() in ("1", "true")
     app.run(host="0.0.0.0", port=port, debug=debug)
 

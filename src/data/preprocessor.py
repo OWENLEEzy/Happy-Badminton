@@ -12,7 +12,6 @@ Functionality:
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from typing import Tuple
 import loguru
 
 from src.utils.helpers import (
@@ -21,9 +20,8 @@ from src.utils.helpers import (
     count_sets,
     calculate_point_diff_set1,
 )
-from src.utils.logger import setup_logger
 
-logger = setup_logger()
+logger = loguru.logger
 
 
 class DataPreprocessor:
@@ -31,7 +29,6 @@ class DataPreprocessor:
 
     # Duration outlier thresholds
     MAX_DURATION_MINUTES = 150
-    MIN_DURATION_MINUTES = 5
 
     def __init__(self, df: pd.DataFrame):
         """

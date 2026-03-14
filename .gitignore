@@ -93,3 +93,10 @@ mlruns/
 
 # Claude AI
 .claude/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover

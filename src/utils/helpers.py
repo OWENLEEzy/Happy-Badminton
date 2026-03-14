@@ -3,13 +3,12 @@ Utility helper functions for score parsing and match analysis.
 """
 
 import re
-from typing import Union, Tuple, List
 
 import numpy as np
 import pandas as pd
 
 
-def is_retirement(score: Union[str, float]) -> bool:
+def is_retirement(score: str | float) -> bool:
     """
     Detect whether a match ended in retirement or walkover.
 
@@ -71,7 +70,7 @@ def count_sets(score: str) -> int | None:
     return min(set_count, 3)
 
 
-def extract_set_scores(score: str) -> List[Tuple[int, int]]:
+def extract_set_scores(score: str) -> list[tuple[int, int]]:
     """
     Extract per-set scores from a score string.
 

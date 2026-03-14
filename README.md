@@ -16,9 +16,10 @@ license: mit
 
 [![AUC](https://img.shields.io/badge/AUC-0.9608-brightgreen?style=for-the-badge&logo=python)](README.md)
 [![Accuracy](https://img.shields.io/badge/Accuracy-89.7%25-blue?style=for-the-badge)](README.md)
-[![Tests](https://img.shields.io/badge/Tests-150%20passing-success?style=for-the-badge&logo=pytest)](README.md)
+[![Tests](https://img.shields.io/badge/Tests-192%20passing-success?style=for-the-badge&logo=pytest)](README.md)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](README.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](README.md)
+[![HuggingFace Spaces](https://img.shields.io/badge/HuggingFace-Spaces-blue?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/owenlee-5678/happy-badminton)
 
 *基于 GBM Stacking Ensemble — LightGBM + XGBoost + CatBoost + BayesianRidge 元学习 + TemperatureScaler 校准*
 
@@ -30,11 +31,19 @@ license: mit
 
 ## 快速开始
 
+### 方式一：本地运行
+
 ```bash
 uv sync                   # 安装依赖
 uv run python main.py     # 自动训练（首次约 3–5 分钟）后启动服务
 # 访问 http://localhost:5001
 ```
+
+### 方式二：HuggingFace Space
+
+直接访问 [**Happy Badminton Space**](https://huggingface.co/spaces/owenlee-5678/happy-badminton) 使用在线版本，无需安装任何依赖。
+
+模型文件托管在 [**HuggingFace Model Hub**](https://huggingface.co/owenlee-5678/happy-badminton-models)，Space 会自动下载。
 
 <details>
 <summary>更多命令</summary>
@@ -107,7 +116,15 @@ flowchart TD
     G --> H[TemperatureScaler\n概率校准]
     H --> I[🎯 predict_proba_calibrated\nAUC 0.9608]
     E -->|Test 15%| I
+
+    J[HuggingFace Space] --> K[Model Hub\nAuto-download models]
+    K --> L[Flask API\n/predict-general]
 ```
+
+**部署架构**：
+- 📦 **Model Hub**: `owenlee-5678/happy-badminton-models` 存储训练好的模型文件
+- 🚀 **Space**: Docker 容器自动从 Model Hub 下载模型并启动 API
+- 🔄 **CI/CD**: GitHub Actions 在每次 push 时自动同步代码到 Space
 
 ---
 

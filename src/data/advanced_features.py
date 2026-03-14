@@ -587,25 +587,37 @@ class NationalityFeatures:
         return df
 
 
-def build_nat_pair_lookup(df: pd.DataFrame) -> dict[str, float]:
+def build_nat_pair_lookup(
+    df: pd.DataFrame, train_end: int | None = None, nat_prior: int = 10
+) -> dict[str, float]:
     """Build final nat pair win rate lookup from fully-featured dataframe.
 
     Returns dict mapping canonical 'NationA|NationB' -> win_rate_of_NationA (0–1).
     Call this after NationalityFeatures.add_nationality_features() has been run.
+
+    Args:
+        df: Match data with nationality features.
+        train_end: Optional index boundary. If provided, only use df[:train_end] to
+                   build the lookup (prevents test-set leakage).
+        nat_prior: Prior count for Bayesian smoothing. Default from config.yaml.
+
+    Returns:
+        Dict mapping 'NationA|NationB' to Bayesian-smoothed win rate of NationA.
     """
-    NAT_PRIOR = NationalityFeatures.NAT_PRIOR
-    df = df.copy()
-    df["_nat_pair"] = df.apply(
+    # Use only training data if train_end is specified
+    df_build = df[:train_end] if train_end is not None else df.copy()
+    df_build = df_build.copy()
+    df_build["_nat_pair"] = df_build.apply(
         lambda r: f"{min(r['winner_assoc'], r['loser_assoc'])}|{max(r['winner_assoc'], r['loser_assoc'])}",
         axis=1,
     )
-    df["_winner_is_first"] = (df["winner_assoc"] <= df["loser_assoc"]).astype(int)
+    df_build["_winner_is_first"] = (df_build["winner_assoc"] <= df_build["loser_assoc"]).astype(int)
 
     lookup: dict[str, float] = {}
-    for pair, group in df.groupby("_nat_pair"):
+    for pair, group in df_build.groupby("_nat_pair"):
         total = len(group)
         wins_first = group["_winner_is_first"].sum()
-        lookup[str(pair)] = float((wins_first + NAT_PRIOR * 0.5) / (total + NAT_PRIOR))
+        lookup[str(pair)] = float((wins_first + nat_prior * 0.5) / (total + nat_prior))
     return lookup
 
 

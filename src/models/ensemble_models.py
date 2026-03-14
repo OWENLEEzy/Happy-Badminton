@@ -322,11 +322,18 @@ class StackingEnsemble:
         """
         Train meta model using base model predictions as features.
 
+        Note: This method uses X_val/y_val to train the meta-learner. The same
+        validation set is later reused by calibrate() for temperature scaling.
+        This is an intentional design trade-off: using a single validation set
+        for both meta-learning and calibration conserves training data, with
+        acceptable overfitting risk given BayesianRidge regularization and
+        TemperatureScaler's single-parameter (T) nature.
+
         Args:
             X_train: Training features
             y_train: Training labels
-            X_val: Validation features
-            y_val: Validation labels
+            X_val: Validation features (also used for calibration)
+            y_val: Validation labels (also used for calibration)
         """
         logger.info("Training meta model...")
 
@@ -397,11 +404,14 @@ class StackingEnsemble:
     def calibrate(self, X_train, y_train, X_val, y_val, method: str = "temperature"):
         """Calibrate with Temperature Scaling (default) or Isotonic.
 
+        Note: This method uses X_val/y_val which were also used in train_meta_model().
+        See train_meta_model() documentation for the rationale behind this design.
+
         Args:
             X_train: train features (unused by temperature scaling, kept for API compat)
             y_train: train labels (unused, kept for API compat)
-            X_val: validation features
-            y_val: validation labels
+            X_val: validation features (also used for meta-learning)
+            y_val: validation labels (also used for meta-learning)
             method: 'temperature' (default) or 'isotonic'
         """
         logger.info(f"Calibrating with method={method}...")
