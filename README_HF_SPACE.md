@@ -17,6 +17,7 @@ AI-powered badminton match prediction using ensemble machine learning models (Li
 
 ## 🎯 Features
 
+- **Two Prediction Modes**: Quick (fast) or Expert (high accuracy)
 - **Match Winner Prediction**: Predict which player will win with probability confidence
 - **Set Count Prediction**: Forecast whether a match will go to 2 or 3 sets
 - **Real-time Inference**: Fast predictions powered by pre-trained models
@@ -25,17 +26,26 @@ AI-powered badminton match prediction using ensemble machine learning models (Li
 ## 🚀 How to Use
 
 1. Visit the Space homepage
-2. Enter match details for both players (ranking, form, streak, etc.)
-3. Click "Predict Winner"
-4. View results with confidence interval and driving factors
+2. Choose prediction mode:
+   - **Quick Mode**: Only need ranking, nationality, ELO, H2H, tournament info → 30 seconds
+   - **Expert Mode**: Need all fields including recent form, streak, career matches → highest accuracy
+3. Enter match details for both players
+4. Click "Predict Winner"
+5. View results with confidence interval and driving factors
 
 ## 📊 Model Performance
 
-### Main Prediction Model
+### Quick Mode (21 features)
+- **AUC**: 0.8703
+- **LogLoss**: 0.4247
+- **Brier Score**: 0.1320
+- **Accuracy**: 81.0%
+
+### Expert Mode (35 features)
 - **AUC**: 0.9608
 - **LogLoss**: 0.2316
 - **Brier Score**: 0.0722
-- **Features**: 35 pre-match features
+- **Accuracy**: 89.7%
 
 ### Set Count Model
 - **AUC**: 0.6635
@@ -46,25 +56,36 @@ AI-powered badminton match prediction using ensemble machine learning models (Li
 Models are automatically downloaded from [HuggingFace Model Hub](https://huggingface.co/owenlee-5678/happy-badminton-models) on first launch.
 
 **Model Files**:
-- `simplified_ensemble.pkl` (3.3MB) - Main prediction model
+- `quick_ensemble.pkl` (3.1MB) - Quick mode model (21 features)
+- `simplified_ensemble.pkl` (3.3MB) - Expert mode model (35 features)
 - `set_count_model.pkl` (1.1MB) - Set count prediction model
 - Feature metadata and nationality pair lookup tables
 
 ## 📖 Input Data Required
 
-All player stats should be sourced from [BadmintonRanks.com](https://badmintonranks.com):
+**All data available from [BadmintonRanks.com](https://badmintonranks.com)**:
 
-### Required Fields (Quick Mode)
-- Player names, nationality, BWF ranking
-- Recent form (last 5/10/20 matches)
-- ELO rating (optional, defaults to 1616)
+### How to Find Each Field
+- **Rankings**: Player page → Profile tab (shows current ranking)
+- **ELO Rating**: Player page → Match Details tab
+- **Recent Form** (5/10/20): Player page → Match Details tab
+- **Streaks**: Player page → Winning Streak tab
+- **Head-to-Head (H2H)**: Player page → Head-to-Head tab
+- **Career Matches**: Player page → Profile tab (shows total wins-losses, e.g., "453-81")
 
-### Additional Fields (Expert Mode)
+### Required Fields (Both Modes)
+- Player names, nationality, **BWF ranking (required)**
+- **ELO rating (required)** - Top 3 feature importance (9.5%)
+- Tournament level, round, host country
 - H2H record (wins/total)
+
+### Additional Fields (Expert Mode Only)
+- Recent form: wins in last 5/10/20 matches
 - Current win/loss streak
 - Career total matches
 - Historical 3-set match rate
-- Host country (for home advantage)
+
+**Note**: ELO is **required** in both modes - it's a critical feature for prediction accuracy.
 
 ## 🔧 Technical Stack
 
@@ -73,27 +94,32 @@ All player stats should be sourced from [BadmintonRanks.com](https://badmintonra
 - **Models**: Custom stacking ensemble with BayesianRidge meta-learner
 - **Calibration**: Temperature Scaling for probability calibration
 - **Frontend**: Vanilla JavaScript (no framework dependencies)
+- **Deployment**: Docker container with auto-download from Model Hub
 
 ## 📦 Training Data
 
 - **Source**: BWF official tournament records (2019-2025)
 - **Matches**: ~15,000 professional matches
 - **Time-based split**: 70% train, 15% validation, 15% test
-- **Features**: 35 pre-match features (no in-match data leakage)
+- **Features**: 21 (Quick) or 35 (Expert) pre-match features
+- **No data leakage**: All features are pre-match only (rolling features use shift(1))
 
 ## 🏆 Key Features
 
-### Non-Linear Features
+### Core Features (Both Modes)
 - Log-rank difference with rank closeness
-- Capped streaks (±5) with momentum tracking
-- Career stage U-curve (peak upset potential at 50-100 matches)
+- ELO rating and ELO difference
+- Tournament level and round
+- Home advantage (nationality and continent-based)
 - Bayesian-smoothed H2H win rates
-
-### Advanced Features
 - Nationality pair win rates (2533 pairs)
-- Continent-based home advantage
-- Form momentum (short-term vs long-term trends)
-- Historical 3-set rates per player
+
+### Expert Mode Additional Features
+- Recent form momentum (5/10/20 match windows)
+- Capped win/loss streaks (±5)
+- Career stage U-curve
+- Historical 3-set match rates
+- Feature interactions (rank × form, rank × H2H)
 
 ### Ensemble Architecture
 1. **Base Models**:

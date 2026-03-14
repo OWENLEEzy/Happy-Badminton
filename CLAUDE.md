@@ -274,22 +274,43 @@ All player stats shown/entered in the frontend (ranking, ELO, recent form, strea
 Do NOT say "BWF official website" when referring to where users look up stats.
 The raw training data (`data/raw/Tournament Results.xlsx`) is separately sourced from BWF match records.
 
-### General Predictor Workflow (SimplifiedEnsemble)
-1. User POSTs match params to `POST /api/predict-general`
-2. `build_general_features()` computes features from user input (stats sourced from BadmintonRanks.com)
-3. Feature vector aligned to `models/simplified_results.json` feature list (order matters)
-4. `model.predict_proba_calibrated()` → TemperatureScaler output
-5. `bootstrap_confidence_interval()` → P10–P90 model spread
+### General Predictor Workflow (Two Modes)
+
+**Quick Mode** (21 features):
+- Required inputs: ranking, nationality, ELO, H2H, tournament level, round
+- Model: `quick_ensemble.pkl`
+- AUC: ~0.87
+- Frontend validation: ELO required (line 238 in app.js)
+
+**Expert Mode** (35 features):
+- Required inputs: All Quick fields + form (5/10/20), streak, career matches, 3-set rate
+- Model: `simplified_ensemble.pkl`
+- AUC: 0.9608
+- Frontend validation: ELO required (line 298 in app.js)
+
+**Shared Workflow**:
+1. User POSTs to `/api/predict-general` with `mode: "quick"` or `mode: "expert"`
+2. `build_general_features()` computes feature vector (ELO is required in both modes)
+3. Model selected based on mode → `predict_proba_calibrated()` → TemperatureScaler
+4. `bootstrap_confidence_interval()` → P10–P90 spread
+
+**ELO Feature Alignment**:
+- Quick model: features 19-21 = winner_elo, loser_elo, elo_diff
+- Expert model: features 33-35 = winner_elo, loser_elo, elo_diff
+- Frontend: Required (HTML `required` attribute + JS validation)
+- Backend: Uses ELO to build features (line 513-515 in app.py)
+- Importance: Top 3 feature (elo_diff = 9.5%)
 
 ---
 
 ## Model Performance Reference
 
-| Model | LogLoss | AUC | Brier | Features | Notes |
-|-------|---------|-----|-------|----------|-------|
-| **SimplifiedEnsemble V2** | **0.4527** | **0.8349** | **0.1485** | 26 | Pre-match only, BayesianRidge + TemperatureScaler |
+| Model | AUC | Features | Mode |
+|-------|-----|----------|------|
+| **Quick Ensemble** | ~0.87 | 21 | Quick mode |
+| **SimplifiedEnsemble V4** | **0.9608** | 35 | Expert mode |
 
-Used by `/api/predict-general`. All 26 features can be input manually — no player database required.
+Both models use Stacking Ensemble (LightGBM + XGBoost + CatStack → BayesianRidge meta-learner).
 
 ---
 
@@ -316,12 +337,20 @@ Happy-Badminton/
 │   ├── validate_model.py          # Evaluate on test set (--model simplified)
 │   └── optimize_sota.py           # Optuna hyperparameter search for base models
 ├── frontend/
-│   ├── app.py                     # Flask API: GET /, POST /api/predict-general, GET /api/health
-│   └── index.html                 # 4-view SPA (Home / Quick / Expert / Result)
+│   ├── app.py                     # Flask API: GET /, POST /api/predict-general (Quick/Expert modes)
+│   ├── templates/
+│   │   └── index.html             # 4-view SPA (Home / Quick / Expert / Result)
+│   └── static/
+│       ├── app.js                 # Frontend logic (Quick mode: line 238, Expert mode: line 298)
+│       └── style.css              # Brutalist theme
 ├── models/                        # Trained model files (gitignored except .gitkeep)
-│   ├── simplified_ensemble.pkl    # SimplifiedEnsemble V2 (AUC 0.8349, 26 features)
-│   ├── simplified_results.json    # Feature list + metrics
-│   └── simplified_feature_importance.json  # LGBM importances for driving factors
+│   ├── quick_ensemble.pkl         # Quick mode model (21 features, AUC ~0.87)
+│   ├── quick_results.json         # Quick mode feature list
+│   ├── quick_nat_pair_win_rates.json  # Quick mode nationality lookup
+│   ├── simplified_ensemble.pkl    # Expert mode model (35 features, AUC 0.9608)
+│   ├── simplified_results.json    # Expert mode feature list
+│   ├── simplified_feature_importance.json  # LGBM importances
+│   └── nat_pair_win_rates.json    # Expert mode nationality lookup
 ├── data/
 │   └── raw/                       # Original Excel (committed, DO NOT MODIFY)
 ├── tests/                         # Pytest test files
@@ -346,6 +375,122 @@ Happy-Badminton/
 
 ---
 
+## HuggingFace Deployment
+
+### Model Hub (Central Storage)
+Models are stored on HuggingFace Model Hub: `owenlee-5678/happy-badminton-models`
+
+Upload models (run once after training):
+```bash
+uv run python scripts/upload_models_to_hf.py
+```
+
+Required files (auto-uploaded by script):
+- `simplified_ensemble.pkl` - Main prediction model
+- `simplified_results.json` - Feature list + metrics
+- `simplified_feature_importance.json` - LGBM importances
+- `nat_pair_win_rates.json` - Nationality pair lookup (2533 pairs)
+- `set_count_model.pkl` - Set count prediction model
+- `set_count_results.json` - Set count metrics
+
+### HF Space (Docker Deployment)
+Live URL: https://owenlee-5678-happy-badminton.hf.space
+
+Auto-deployment workflow:
+1. Push to `main` branch → GitHub Actions triggers
+2. Creates clean deploy environment (`/tmp/hf-deploy`)
+3. Copies frontend assets + models dir to root (HF Space requirement)
+4. Generates Dockerfile with `HF_ENABLE_AUTO_DOWNLOAD=true`
+5. Pushes to HF Space → Auto-rebuild + Auto-download models from Hub
+
+**Critical**: Upload models to Model Hub BEFORE pushing to GitHub.
+Space will fail on first API request if models aren't on Hub.
+
+### Environment Detection (Dual-Mode Support)
+`frontend/app.py` automatically detects environment:
+```python
+# Local development: frontend/app.py → project_root = parent.parent
+# HF Space: app.py in root → project_root = parent
+if Path(__file__).parent.name == "frontend":
+    project_root = Path(__file__).parent.parent
+else:
+    project_root = Path(__file__).parent
+```
+
+Model auto-download behavior:
+- `HF_ENABLE_AUTO_DOWNLOAD=true` (default on HF Space)
+- Downloads missing models from Hub on first API request
+- Validates file size (±20% tolerance) to detect corruption
+- Caches models in memory after first load
+
+### ⚠️ CRITICAL: Binary Files Cannot Be Pushed to HF Space
+
+**Problem**: HuggingFace Space **rejects Git pushes containing binary files** (`.pkl` models).
+
+**Error Message**:
+```
+remote: Your push was rejected because it contains binary files.
+remote: Please use https://huggingface.co/docs/hub/xet to store binary files.
+remote: Offending files:
+remote:   - models/set_count_model.pkl
+remote:   - models/simplified_ensemble.pkl
+```
+
+**Root Cause**: GitHub Actions workflow tries to copy models directory:
+```yaml
+# ❌ WRONG - This triggers binary file rejection
+cp -r "$GITHUB_WORKSPACE/models" .
+```
+
+**Solution**:
+1. **Never copy models in GitHub Actions** - Remove `cp -r "$GITHUB_WORKSPACE/models" .` from workflow
+2. **Upload models to Model Hub first**:
+   ```bash
+   uv run python scripts/upload_models_to_hf.py
+   ```
+3. **Enable auto-download in Dockerfile**:
+   ```yaml
+   ENV HF_ENABLE_AUTO_DOWNLOAD=true
+   ```
+4. **Do NOT COPY models in Dockerfile**:
+   ```dockerfile
+   # ❌ WRONG
+   COPY models/ ./models/
+
+   # ✅ CORRECT - Create empty directory for auto-download
+   RUN mkdir -p models
+   ```
+
+**Correct Deployment Workflow**:
+1. Train models locally → `models/*.pkl` created
+2. Upload to Model Hub → `uv run python scripts/upload_models_to_hf.py`
+3. Push to GitHub → Actions deploys code (NOT models) to HF Space
+4. Space starts → Auto-downloads models from Model Hub
+5. API ready → Models load on first request
+
+### Troubleshooting HF Space
+
+**Error**: `Simplified model not found`
+- **Cause**: Models not uploaded to Model Hub
+- **Fix**: Run `uv run python scripts/upload_models_to_hf.py`
+
+**Error**: `500 Internal Server Error` on API
+- **Cause**: Space hasn't auto-downloaded models yet
+- **Fix**: Wait 2-3 min after deploy, or trigger Space restart via HF web UI
+
+**Verification**:
+```bash
+# Test homepage loads
+curl -s "https://owenlee-5678-happy-badminton.hf.space/" | head -20
+
+# Test API endpoint (requires valid request body)
+curl -s -X POST "https://owenlee-5678-happy-badminton.hf.space/api/predict-general" \
+  -H "Content-Type: application/json" \
+  -d '{"match_type":"MS","player1":{"ranking":1},"player2":{"ranking":8}}'
+```
+
+---
+
 ## Quick Reference
 
 ```bash
@@ -358,6 +503,10 @@ uv run python main.py
 # Train / validate standalone
 uv run python scripts/train_simplified.py
 uv run python scripts/validate_model.py
+
+# Deploy to HuggingFace (upload models first!)
+uv run python scripts/upload_models_to_hf.py  # ← Do this FIRST
+git push origin main  # ← Then this triggers GitHub Actions → HF Space
 ```
 
 | 操作         | Claude 权限 |

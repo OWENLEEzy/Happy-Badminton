@@ -473,3 +473,93 @@ select:focus, input:focus { border-color: var(--red); }
   .row { grid-template-columns: 1fr; }
   .context-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* Field hint text for ELO and other special fields */
+.field-hint {
+  font-size: 11px;
+  color: #6B7280;
+  margin-top: 4px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+/* ─── DATA SOURCE GUIDE ───────────────────────────────── */
+.data-source-guide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #FEF3C7 0%, #FEF9C3 100%);
+  border: 2px solid #F59E0B;
+  border-radius: 8px;
+}
+
+.guide-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.guide-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.guide-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.guide-content {
+  flex: 1;
+}
+
+.guide-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  color: #92400E;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.guide-desc {
+  font-size: 12px;
+  color: #78716C;
+  line-height: 1.4;
+}
+
+.guide-desc a {
+  color: #92400E;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.guide-desc a:hover {
+  color: #B45309;
+}
+
+/* Dark mode support for data source guide */
+@media (prefers-color-scheme: dark) {
+  .data-source-guide {
+    background: linear-gradient(135deg, #451A03 0%, #78350F 100%);
+    border-color: #F59E0B;
+  }
+  
+  .guide-title {
+    color: #FEF3C7;
+  }
+  
+  .guide-desc {
+    color: #E7E5E4;
+  }
+  
+  .guide-desc a {
+    color: #FEF3C7;
+  }
+  
+  .guide-desc a:hover {
+    color: #FDE68A;
+  }
+}

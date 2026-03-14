@@ -33,7 +33,6 @@ from sklearn.metrics import log_loss, roc_auc_score, brier_score_loss, accuracy_
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression, BayesianRidge
 
-import optuna
 from loguru import logger
 
 
@@ -165,6 +164,8 @@ class CatBoostModel:
 
             val_pred = model.predict_proba(val_pool)[:, 1]
             return log_loss(y_val, val_pred)
+
+        import optuna
 
         study = optuna.create_study(direction="minimize")
         study.optimize(objective, n_trials=n_trials, show_progress_bar=False)

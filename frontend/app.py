@@ -49,14 +49,14 @@ HF_ENABLE_AUTO_DOWNLOAD = os.environ.get("HF_ENABLE_AUTO_DOWNLOAD", "true").lowe
 # Allow ±20% tolerance to account for model version differences
 HF_MODEL_SIZES = {
     "simplified_ensemble.pkl": 3.3 * 1024 * 1024,  # ~3.3MB
-    "quick_ensemble.pkl": 3.3 * 1024 * 1024,  # ~3.3MB (Quick mode)
+    "quick_ensemble.pkl": 3.1 * 1024 * 1024,  # ~3.1MB
     "set_count_model.pkl": 1.1 * 1024 * 1024,  # ~1.1MB
     "simplified_results.json": 2 * 1024,  # ~2KB
-    "simplified_feature_importance.json": 2 * 1024,  # ~2KB
-    "quick_results.json": 2 * 1024,  # ~2KB
-    "quick_feature_importance.json": 2 * 1024,  # ~2KB
-    "quick_nat_pair_win_rates.json": 200 * 1024,  # ~200KB
-    "nat_pair_win_rates.json": 200 * 1024,  # ~200KB
+    "simplified_feature_importance.json": 1.5 * 1024,  # ~1.5KB (actual: 1.4KB)
+    "quick_results.json": 1.5 * 1024,  # ~1.5KB (actual: 1.4KB)
+    "quick_feature_importance.json": 1.5 * 1024,  # ~1.5KB
+    "quick_nat_pair_win_rates.json": 90 * 1024,  # ~90KB (actual: 89KB)
+    "nat_pair_win_rates.json": 90 * 1024,  # ~90KB (actual: 89KB)
     "set_count_results.json": 1 * 1024,  # ~1KB
 }
 
@@ -140,13 +140,17 @@ def _download_from_huggingface(filename: str) -> Path:
         )
 
     # Download from HuggingFace
+    import loguru
+
+    logger = loguru.logger
+
     try:
         from huggingface_hub import hf_hub_download
 
-        import loguru
-
-        logger = loguru.logger
         logger.info(f"Downloading {filename} from HuggingFace Model Hub...")
+        logger.info(f"  Repo: {HF_MODEL_REPO}")
+        logger.info(f"  Target: {filename}")
+        logger.info(f"  Local dir: {project_root / 'models'}")
 
         downloaded_path = hf_hub_download(
             repo_id=HF_MODEL_REPO,
@@ -156,18 +160,21 @@ def _download_from_huggingface(filename: str) -> Path:
         )
 
         logger.info(f"✓ Downloaded {filename} from https://huggingface.co/{HF_MODEL_REPO}")
+        logger.info(f"  Downloaded to: {downloaded_path}")
 
         # Validate file size to detect corruption
         downloaded_file = Path(downloaded_path)
         _validate_model_file_size(downloaded_file, filename)
 
         return downloaded_file
-    except ImportError:
+    except ImportError as e:
+        logger.error(f"Failed to import huggingface_hub: {e}")
         raise FileNotFoundError(
             f"huggingface_hub not installed. Install with: uv add huggingface_hub"
         )
     except OSError as e:
         # Network-related errors (timeout, connection error, etc.)
+        logger.error(f"Network error downloading {filename}: {e}")
         raise FileNotFoundError(
             f"Network error downloading {filename} from HuggingFace: {e}\n"
             f"Check your network connection or try again later.\n"
@@ -175,6 +182,7 @@ def _download_from_huggingface(filename: str) -> Path:
         )
     except Exception as e:
         # Other HuggingFace Hub errors (repo not found, file not found, etc.)
+        logger.error(f"Failed to download {filename}: {type(e).__name__}: {e}")
         raise FileNotFoundError(
             f"Failed to download {filename} from HuggingFace: {e}\n"
             f"Please check: https://huggingface.co/{HF_MODEL_REPO}"
@@ -927,11 +935,14 @@ def predict_general():
             }
         )
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
+        # Preserve the actual error message for debugging
+        error_msg = str(e)
+        import loguru
+
+        loguru.logger.error(f"Model load failed: {error_msg}")
         return (
-            jsonify(
-                {"error": "Simplified model not found. Run: python scripts/train_simplified.py"}
-            ),
+            jsonify({"error": error_msg}),
             503,
         )
     except (ValueError, KeyError, AttributeError, TypeError, RuntimeError) as e:

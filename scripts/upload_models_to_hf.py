@@ -7,6 +7,7 @@ Then the HuggingFace Space will download them automatically on startup.
 """
 
 import sys
+import os
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent
@@ -32,11 +33,18 @@ def upload_models():
     # Login to HuggingFace
     print("\n1. Logging in to HuggingFace...")
     try:
-        login()
-        print("   ✓ Logged in successfully")
+        # Try to get token from environment variable
+        token = os.environ.get("HF_TOKEN")
+        if token:
+            login(token=token)
+            print("   ✓ Logged in successfully (using HF_TOKEN env var)")
+        else:
+            # Fallback to interactive login
+            login()
+            print("   ✓ Logged in successfully (interactive)")
     except Exception as e:
         print(f"   ✗ Login failed: {e}")
-        print("\nPlease run: huggingface-cli login")
+        print("\nPlease set HF_TOKEN environment variable or run: huggingface-cli login")
         return
 
     api = HfApi()

@@ -76,10 +76,13 @@ QUICK_FEATURES = [
     "elo_diff",
 ]
 
+
 def main() -> None:
     logger.info("============================================================")
     logger.info("Quick Mode Model Training")
-    logger.info("Features: {} (Quick Mode only - no form/streak/career)".format(len(QUICK_FEATURES)))
+    logger.info(
+        "Features: {} (Quick Mode only - no form/streak/career)".format(len(QUICK_FEATURES))
+    )
     logger.info("============================================================")
 
     # Load config

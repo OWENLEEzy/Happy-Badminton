@@ -68,6 +68,19 @@
 
     <div class="error-msg" id="quick-error"></div>
 
+    <!-- DATA SOURCE GUIDE -->
+    <div class="data-source-guide">
+      <div class="guide-section full-width">
+        <div class="guide-icon">🌐</div>
+        <div class="guide-content">
+          <div class="guide-title" data-i18n="guide_lookup_title">ALL DATA AVAILABLE ON BadmintonRanks.com</div>
+          <div class="guide-desc" data-i18n="guide_lookup_desc_quick">
+            Rankings, Nationality → <a href="https://badmintonranks.com" target="_blank" rel="noopener">BadmintonRanks.com</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Match context -->
     <div class="panel">
       <div class="section-label" data-i18n="match_context">Match Context</div>
@@ -121,6 +134,10 @@
           <select id="quick-country"></select>
         </div>
       </div>
+      <div class="field-wrap">
+        <div class="field-label" data-i18n="match_month">Match Month (1–12)</div>
+        <input type="number" id="quick-month" min="1" max="12">
+      </div>
     </div>
 
     <!-- Players -->
@@ -128,6 +145,10 @@
       <div class="row">
         <div>
           <div class="col-header" data-i18n="player1">PLAYER 1</div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="name_opt">Name (optional)</div>
+            <input type="text" id="q-p1-name" data-i18n-placeholder="ph_name1">
+          </div>
           <div class="field-wrap">
             <div class="field-label" data-i18n="bwf_rank">BWF Ranking</div>
             <input type="number" id="q-p1-rank" placeholder="1" min="1" max="1000">
@@ -139,12 +160,19 @@
             </div>
           </div>
           <div class="field-wrap">
-            <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
+            <div class="field-label">
+              <span data-i18n="bwf_elo">BWF ELO</span><span class="req-star">*</span>
+            </div>
             <input type="number" id="q-p1-elo" placeholder="1616" min="1000" max="3000" required>
+            <div class="field-hint" data-i18n="elo_hint"></div>
           </div>
         </div>
         <div>
           <div class="col-header" data-i18n="player2">PLAYER 2</div>
+          <div class="field-wrap">
+            <div class="field-label" data-i18n="name_opt">Name (optional)</div>
+            <input type="text" id="q-p2-name" data-i18n-placeholder="ph_name2">
+          </div>
           <div class="field-wrap">
             <div class="field-label" data-i18n="bwf_rank">BWF Ranking</div>
             <input type="number" id="q-p2-rank" placeholder="2" min="1" max="1000">
@@ -158,6 +186,7 @@
           <div class="field-wrap">
             <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
             <input type="number" id="q-p2-elo" placeholder="1616" min="1000" max="3000" required>
+            <div class="field-hint" data-i18n="elo_hint"></div>
           </div>
         </div>
       </div>
@@ -192,6 +221,19 @@
     <div class="form-headline" data-i18n="expert_headline">EXPERT PREDICT</div>
 
     <div class="error-msg" id="expert-error"></div>
+
+    <!-- DATA SOURCE GUIDE -->
+    <div class="data-source-guide">
+      <div class="guide-section full-width">
+        <div class="guide-icon">🌐</div>
+        <div class="guide-content">
+          <div class="guide-title" data-i18n="guide_lookup_title">ALL DATA AVAILABLE ON BadmintonRanks.com</div>
+          <div class="guide-desc" data-i18n="guide_lookup_desc_expert">
+            Rankings, Form, Streak, Career → <a href="https://badmintonranks.com" target="_blank" rel="noopener">BadmintonRanks.com</a>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Match context -->
     <div class="panel">
@@ -301,6 +343,7 @@
           <div class="field-wrap">
             <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
             <input type="number" id="e-p1-elo" placeholder="1616" min="1000" max="3000" required>
+            <div class="field-hint" data-i18n="elo_hint"></div>
           </div>
         </div>
         <div>
@@ -346,6 +389,7 @@
           <div class="field-wrap">
             <div class="field-label" data-i18n="bwf_elo">BWF ELO<span class="req-star">*</span></div>
             <input type="number" id="e-p2-elo" placeholder="1616" min="1000" max="3000" required>
+            <div class="field-hint" data-i18n="elo_hint"></div>
           </div>
         </div>
       </div>

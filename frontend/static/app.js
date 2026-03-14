@@ -6,7 +6,7 @@ const TRANSLATIONS = {
     quick_desc:         'Just rankings and H2H. Fast prediction in seconds.',
     quick_inputs:       'RANKING · TOURNAMENT · ROUND · H2H',
     expert_title:       'EXPERT',
-    expert_desc:        'Full form data from BadmintonRanks.com for maximum accuracy.',
+    expert_desc:        'Full form data for maximum accuracy.',
     expert_inputs:      'FORM · STREAK · CAREER · OPP QUALITY',
     start_btn:          'START →',
     back_btn:           '← BACK',
@@ -30,7 +30,8 @@ const TRANSLATIONS = {
     wins_last20:        'Wins in last 20',
     streak:             'Current Streak (neg = losing)',
     career_matches:     'Career Matches',
-    bwf_elo:            'BWF ELO',
+    bwf_elo:            'ELO Rating *',
+    elo_hint:           '(Player page → Match Details tab)',
     host_country:       'Host Country',
     match_month:        'Match Month (1–12)',
     h2h_optional_long:  'Head-to-Head (optional — leave blank if unknown)',
@@ -50,10 +51,13 @@ const TRANSLATIONS = {
     wins_21:            'wins 2-1',
     h2h_required:       'Head-to-Head',
     err_rank:           'Rankings, nationalities, ELO, tournament level, and round are required.',
-    err_expert:         'All fields are required: rankings, nationalities, ELO, level, round, host country, form (5/10/20), H2H, streak, career matches, and 3-set rate.',
+    err_expert:         'All fields are required: rankings, nationalities, ELO, level, round, host country, form (5/10/20), H2H, streak, and career matches.',
     err_predict:        'Prediction failed.',
-    badmintonranks_link: 'Look up stats on BadmintonRanks →',
+    badmintonranks_link: '<strong>Data sources:</strong> Rankings, form, H2H → <a href="https://badmintonranks.com" target="_blank" rel="noopener">BadmintonRanks.com</a>',
     footer_thanks: 'Special thanks to <a href="https://badmintonranks.com" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">BadmintonRanks.com</a> for generously providing the dataset that makes this project possible.',
+    guide_lookup_title:  '🌐 LOOK UP DATA ON BadmintonRanks.com',
+    guide_lookup_desc_quick: '<strong>All fields available on website:</strong><br>• Rankings → Player page → Profile tab<br>• Nationality → Player page → Profile tab<br>• ELO Rating → Player page → Match Details tab<br>• H2H → Player page → Head-to-Head tab<br><br><a href="https://badmintonranks.com/player?id=5012304" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:underline;">Example: Player Page (An Se-young)</a>',
+    guide_lookup_desc_expert: '<strong>All Quick fields PLUS:</strong><br>• Form (5/10/20) → Player page → Match Details tab<br>• Streak → Player page → Winning Streak tab<br>• Career Matches → Player page → Profile tab<br>• H2H required (same as Quick)<br><br><em style="color:#666">NOTE: 3-Set Rate is optional (not available on website)</em><br><br><a href="https://badmintonranks.com/player?id=5012304" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:underline;">Example: Player Page (All Tabs)</a>',
     opt_og:             'Olympics',
     opt_wc:             'World Championships',
     opt_is:             'International Series',
@@ -100,7 +104,8 @@ const TRANSLATIONS = {
     wins_last20:        '近 20 场胜场',
     streak:             '当前连胜（负数=连败）',
     career_matches:     '生涯场次',
-    bwf_elo:            'BWF ELO',
+    bwf_elo:            'ELO 评分 *',
+    elo_hint:           '（球员页面 → 比赛详情标签页）',
     host_country:       '举办国',
     match_month:        '比赛月份（1-12）',
     h2h_optional_long:  '交手记录（可选 — 不知道可留空）',
@@ -120,10 +125,13 @@ const TRANSLATIONS = {
     wins_21:            '以 2-1 胜',
     h2h_required:       '交手记录',
     err_rank:           '排名、国籍、ELO、赛事级别和轮次为必填项。',
-    err_expert:         '所有字段均为必填：排名、国籍、ELO、赛事级别、轮次、举办国、近况（5/10/20场）、交手记录、连胜/败、生涯场次和三局比例。',
+    err_expert:         '所有字段均为必填：排名、国籍、ELO、赛事级别、轮次、举办国、近况（5/10/20场）、交手记录、连胜/败、生涯场次。',
     err_predict:        '预测失败，请重试。',
-    badmintonranks_link: '前往 BadmintonRanks 查询 →',
+    badmintonranks_link: '<strong>数据来源：</strong>排名、近况、交手 → <a href="https://badmintonranks.com" target="_blank" rel="noopener">BadmintonRanks.com</a>',
     footer_thanks: '特别感谢 <a href="https://badmintonranks.com" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">BadmintonRanks.com</a> 的 owner 慷慨授权使用数据库，没有他们就没有这个项目。',
+    guide_lookup_title:  '🌐 数据查询指南',
+    guide_lookup_desc_quick: '<strong>所有数据均可从网站获取：</strong><br>• 排名 → 球员页面 → 档案资料标签页<br>• 国籍 → 球员页面 → 档案资料标签页<br>• ELO 评分 → 球员页面 → 比赛详情标签页<br>• 交手记录 → 球员页面 → 交手记录标签页<br><br><a href="https://badmintonranks.com/player?id=5012304" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:underline;">示例：球员页面（安洗莹）</a>',
+    guide_lookup_desc_expert: '<strong>快速模式的所有字段 PLUS：</strong><br>• 近况（5/10/20场） → 球员页面 → 比赛详情标签页<br>• 连胜/败 → 球员页面 → 连胜场次标签页<br>• 生涯场次 → 球员页面 → 档案资料标签页<br>• 交手记录必填（同快速模式）<br><br><em style="color:#666">注意：三局比例（3-Set Rate）为可选项（网站无此数据）</em><br><br><a href="https://badmintonranks.com/player?id=5012304" target="_blank" rel="noopener" style="color:#2563EB;text-decoration:underline;">示例：球员页面（全部标签页）</a>',
     opt_og:             '奥运会',
     opt_wc:             '世界锦标赛',
     opt_is:             '国际系列赛',
@@ -239,26 +247,28 @@ function buildQuickPayload() {
 
   const matchType = getToggleVal('quick-type-toggle') || 'MS';
   const country   = document.getElementById('quick-country').value.trim().toUpperCase();
+  const month     = intOrNull('quick-month') ?? (new Date().getMonth() + 1);
+  const p1Name    = strOrEmpty('q-p1-name') || 'Player 1';
+  const p2Name    = strOrEmpty('q-p2-name') || 'Player 2';
 
   const h2hWins  = intOrNull('q-h2h-wins')  ?? 0;
   const h2hTotal = intOrNull('q-h2h-total') ?? 0;
 
-  const now = new Date();
   return {
     mode: 'quick',  // Use Quick mode model (21 features, AUC ~0.87)
     match_type: matchType,
     tournament_level: level,
     round_stage: parseInt(round, 10),
-    match_month: now.getMonth() + 1,
+    match_month: month,
     host_country: country,
     player1: {
-      name: 'Player 1',
+      name: p1Name,
       ranking: p1Rank,
       nationality: p1Nat,
       elo: p1Elo,
     },
     player2: {
-      name: 'Player 2',
+      name: p2Name,
       ranking: p2Rank,
       nationality: p2Nat,
       elo: p2Elo,
@@ -285,15 +295,15 @@ function buildExpertPayload() {
   const eRound = document.getElementById('expert-round').value;
   const country = strOrEmpty('expert-country');  // '' = placeholder (disabled), 'NEUTRAL' = no home
 
-  // All Expert fields are required
+  // All Expert fields are required except 3-set rate (not available on BadmintonRanks.com)
   const h2hWins  = intOrNull('e-h2h-wins');
   const h2hTotal = intOrNull('e-h2h-total');
   const p1Streak = intOrNull('e-p1-streak');
   const p2Streak = intOrNull('e-p2-streak');
   const p1Career = intOrNull('e-p1-career');
   const p2Career = intOrNull('e-p2-career');
-  const p1_3srate = intOrNull('e-p1-3srate');
-  const p2_3srate = intOrNull('e-p2-3srate');
+  const p1_3srate = intOrNull('e-p1-3srate') ?? 0;  // Optional - defaults to 0
+  const p2_3srate = intOrNull('e-p2-3srate') ?? 0;  // Optional - defaults to 0
 
   if (!p1Rank || !p2Rank || !p1Nat || !p2Nat || !p1Elo || !p2Elo || !eLevel || eRound === '' ||
       !country ||
@@ -301,8 +311,7 @@ function buildExpertPayload() {
       p2f5 === null || p2f10 === null || p2f20 === null ||
       h2hWins === null || h2hTotal === null ||
       p1Streak === null || p2Streak === null ||
-      p1Career === null || p2Career === null ||
-      p1_3srate === null || p2_3srate === null) return null;
+      p1Career === null || p2Career === null) return null;  // 3-set rate NOT required
 
   const matchType = getToggleVal('expert-type-toggle') || 'MS';
   const month     = intOrNull('expert-month') ?? (new Date().getMonth() + 1);
@@ -533,4 +542,5 @@ document.getElementById('again-btn').addEventListener('click', () => showView(_p
 populateCountrySelects();
 initToggles();
 document.getElementById('expert-month').value = new Date().getMonth() + 1;
+document.getElementById('quick-month').value = new Date().getMonth() + 1;
 setLang(_lang);  // apply saved language on load
